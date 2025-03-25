@@ -1,0 +1,15 @@
+{
+  "name": "discord-news-flash",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.18.0",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1",
+    "axios": "^1.8.4",
+    "node-persist": "^4.0.4"
+  }
+}
