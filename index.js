@@ -17,7 +17,7 @@ const client = new Client({
   ]
 });
 
-const BOT_TOKEN = 'MTI5OTc5NTA0MDcwODcyMjc2OQ.G36SOY.yrYQe0ru9MJkPJgxW4oPPBXkO6xwLrhkZooCH0';
+const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHANNEL_ID = '1293122239964909661';
 let dailyNews = [];
 
