@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>أخبار الجريدة</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #e0eafc, #cfdef3);
+      color: #2c3e50;
+      font-family: 'Tajawal', sans-serif;
+      margin: 0;
+      padding: 10px;
+      direction: rtl;
+    }
+    h1 {
+      text-align: center;
+      font-size: 2em;
+      color: #34495e;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    #news-container {
+      max-width: 100%;
+      margin: 0 auto;
+    }
+    .news-page {
+      display: none;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 15px;
+    }
+    .news-page.active {
+      display: grid;
+    }
+    .news-article {
+      background: white;
+      border-radius: 8px;
+      padding: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      cursor: pointer;
+      animation: fadeIn 0.5s ease;
+      display: flex;
+      flex-direction: column;
+      height: 220px; /* ارتفاع موحد */
+    }
+    .news-article.urgent {
+      border: 2px solid #e74c3c;
+      background: #fff1f1;
+      animation: glow 1.5s infinite alternate;
+    }
+    .news-article h2 {
+      margin: 0 0 5px;
+      font-size: 1.2em;
+      color: #e74c3c;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .news-article p {
+      margin: 5px 0;
+      font-size: 0.9em;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      flex-grow: 1;
+    }
+    .news-article img {
+      width: 100%;
+      height: 120px; /* ارتفاع موحد للصور */
+      object-fit: cover; /* لضمان تناسق الصور */
+      border-radius: 5px;
+      margin-top: 5px;
+    }
+    /* نافذة التفاصيل */
+    #news-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      max-width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      animation: slideIn 0.3s ease;
+    }
+    .modal-content h2 { font-size: 1.5em; color: #e74c3c; }
+    .modal-content p { font-size: 1em; }
+    .modal-content img { max-width: 100%; }
+    .modal-content .timestamp { font-size: 0.9em; color: #7f8c8d; }
+    /* الأزرار العائمة */
+    .floating-buttons {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      display: flex;
+      gap: 10px;
+    }
+    .floating-btn {
+      padding: 10px 20px;
+      font-size: 0.9em;
+      color: white;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    .floating-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    #chat-btn { background: #3498db; }
+    #summarize-btn { background: #2ecc71; }
+    /* نافذة الشات */
+    #chat-container {
+      display: none;
+      position: fixed;
+      bottom: 70px;
+      right: 10px;
+      width: 90%;
+      max-width: 300px;
+      background: white;
+      border-radius: 10px;
+      padding: 10px;
+      box-shadow: 0 2px 15px rgba(0,0,0,0.2);
+    }
+    #chat-container h3 { margin: 0 0 10px; font-size: 1.1em; color: #34495e; }
+    #chat-messages {
+      height: 150px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+      padding: 5px;
+    }
+    .chat-bubble {
+      margin: 5px 0;
+      padding: 8px;
+      border-radius: 12px;
+      max-width: 80%;
+      word-wrap: break-word;
+    }
+    .chat-bubble.user {
+      background: #3498db;
+      color: white;
+      margin-left: auto;
+      text-align: right;
+    }
+    .chat-bubble.bot {
+      background: #ecf0f1;
+      color: #2c3e50;
+      margin-right: auto;
+    }
+    #chat-input {
+      width: 65%;
+      padding: 6px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    #chat-send {
+      padding: 6px 12px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #chat-send:hover { background: #2980b9; }
+    /* نافذة التلخيص */
+    #summary-container {
+      display: none;
+      position: fixed;
+      bottom: 70px;
+      right: 10px;
+      width: 90%;
+      max-width: 300px;
+      background: #ffeaa7;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 2px 15px rgba(0,0,0,0.2);
+      text-align: center;
+      font-size: 0.9em;
+    }
+    /* أزرار التصفح */
+    #pagination {
+      text-align: center;
+      margin: 15px 0;
+    }
+    #pagination button {
+      padding: 8px 15px;
+      background: #34495e;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 0 5px;
+    }
+    #pagination button:hover { background: #2c3e50; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes glow {
+      from { box-shadow: 0 0 3px #e74c3c; }
+      to { box-shadow: 0 0 10px #e74c3c; }
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media (max-width: 600px) {
+      h1 { font-size: 1.5em; }
+      .news-article {
+        padding: 8px;
+        height: 180px; /* ارتفاع أصغر للهاتف */
+      }
+      .news-article h2 { font-size: 1em; }
+      .news-article p { font-size: 0.8em; }
+      .news-article img { height: 100px; }
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <h1>أخبار الجريدة</h1>
+  <div id="news-container"></div>
+  <div id="pagination">
+    <button id="prev-btn">السابق</button>
+    <button id="next-btn">التالي</button>
+  </div>
+  <div id="news-modal">
+    <div class="modal-content">
+      <h2 id="modal-title"></h2>
+      <p id="modal-description"></p>
+      <img id="modal-image" src="" alt="">
+      <p class="timestamp" id="modal-timestamp"></p>
+    </div>
+  </div>
+  <div class="floating-buttons">
+    <button id="chat-btn" class="floating-btn" onclick="toggleChat()">مسؤول الأخبار</button>
+    <button id="summarize-btn" class="floating-btn" onclick="toggleSummary()">التلخيص</button>
+  </div>
+  <div id="chat-container">
+    <h3>مسؤول الأخبار</h3>
+    <div id="chat-messages"></div>
+    <input id="chat-input" type="text" placeholder="اكتب سؤالك هنا...">
+    <button id="chat-send" onclick="sendMessage()">إرسال</button>
+  </div>
+  <div id="summary-container"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const newsContainer = document.getElementById('news-container');
+    const chatContainer = document.getElementById('chat-container');
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInput = document.getElementById('chat-input');
+    const summaryContainer = document.getElementById('summary-container');
+    const newsModal = document.getElementById('news-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalDescription = document.getElementById('modal-description');
+    const modalImage = document.getElementById('modal-image');
+    const modalTimestamp = document.getElementById('modal-timestamp');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    let allNews = [];
+    const itemsPerPage = 6;
+    let currentPage = 1;
+
+    function renderNews(newsArray) {
+      newsContainer.innerHTML = '';
+      const pages = Math.ceil(newsArray.length / itemsPerPage);
+      for (let i = 0; i < pages; i++) {
+        const pageDiv = document.createElement('div');
+        pageDiv.className = 'news-page';
+        pageDiv.id = `page-${i + 1}`;
+        const start = i * itemsPerPage;
+        const end = start + itemsPerPage;
+        newsArray.slice(start, end).forEach(news => {
+          const article = document.createElement('div');
+          article.className = `news-article ${news.type === 'urgent' ? 'urgent' : ''}`;
+          article.innerHTML = `
+            <h2>${news.title}</h2>
+            <p>${news.description}</p>
+            ${news.image ? `<img src="${news.image}" alt="صورة الخبر">` : ''}
+          `;
+          article.onclick = () => showNewsDetails(news);
+          pageDiv.appendChild(article);
+        });
+        newsContainer.appendChild(pageDiv);
+      }
+      showPage(currentPage, pages);
+    }
+
+    function showPage(page, totalPages) {
+      currentPage = page;
+      document.querySelectorAll('.news-page').forEach(pageDiv => pageDiv.classList.remove('active'));
+      document.getElementById(`page-${page}`).classList.add('active');
+      prevBtn.disabled = page === 1;
+      nextBtn.disabled = page === totalPages;
+    }
+
+    prevBtn.onclick = () => { if (currentPage > 1) showPage(currentPage - 1, Math.ceil(allNews.length / itemsPerPage)); };
+    nextBtn.onclick = () => { if (currentPage < Math.ceil(allNews.length / itemsPerPage)) showPage(currentPage + 1, Math.ceil(allNews.length / itemsPerPage)); };
+
+    function showNewsDetails(news) {
+      modalTitle.innerText = news.title;
+      modalDescription.innerText = news.description;
+      modalImage.src = news.image || '';
+      modalImage.style.display = news.image ? 'block' : 'none';
+      modalTimestamp.innerText = news.timestamp;
+      newsModal.style.display = 'flex';
+    }
+
+    newsModal.onclick = (e) => {
+      if (e.target === newsModal) newsModal.style.display = 'none';
+    };
+
+    socket.on('loadNews', (newsArray) => {
+      allNews = newsArray;
+      renderNews(allNews);
+    });
+
+    socket.on('newNews', (news) => {
+      allNews.unshift(news);
+      renderNews(allNews);
+    });
+
+    socket.on('dailySummary', (summary) => {
+      summaryContainer.innerText = summary;
+      summaryContainer.style.display = 'block';
+    });
+
+    socket.on('botResponse', (response) => {
+      const bubble = document.createElement('div');
+      bubble.className = 'chat-bubble bot';
+      bubble.innerText = response;
+      chatMessages.appendChild(bubble);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
+
+    function sendMessage() {
+      const message = chatInput.value.trim();
+      if (message) {
+        const bubble = document.createElement('div');
+        bubble.className = 'chat-bubble user';
+        bubble.innerText = message;
+        chatMessages.appendChild(bubble);
+        socket.emit('chatMessage', message);
+        chatInput.value = '';
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+    }
+
+    function toggleChat() {
+      chatContainer.style.display = chatContainer.style.display === 'block' ? 'none' : 'block';
+      summaryContainer.style.display = 'none';
+    }
+
+    function toggleSummary() {
+      fetch('/summarize');
+      summaryContainer.style.display = summaryContainer.style.display === 'block' ? 'none' : 'block';
+      chatContainer.style.display = 'none';
+    }
+
+    chatInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+  </script>
+</body>
+</html>
