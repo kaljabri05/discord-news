@@ -84,6 +84,10 @@ client.on('messageCreate', async (message) => {
   }
 });
 
+if (!BOT_TOKEN) {
+  console.error('خطأ: رمز البوت غير معرف! تأكد من تعيين BOT_TOKEN في متغيرات البيئة.');
+  process.exit(1);
+}
 client.login(BOT_TOKEN);
 
 async function classifyNews(title, description) {
