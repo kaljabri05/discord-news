@@ -1,194 +1,101 @@
 const express = require('express');
-const http = require('http');
-const socketIo = require('socket.io');
-const { Client, GatewayIntentBits } = require('discord.js'); // استخدام المكتبة الرسمية
-const Keyv = require('keyv');
-const fs = require('fs').promises;
-const path = require('path');
-const { queryGemini } = require('./gemini');
-
-// تهيئة Express و Socket.IO
+const { Server } = require('socket.io');
+const { Client, GatewayIntentBits } = require('discord.js');
 const app = express();
-const server = http.createServer(app);
-const io = socketIo(server);
+const server = require('http').createServer(app);
+const io = new Server(server);
+require('dotenv').config();
 
-// تهيئة Discord Bot Client مع النوايا
-const client = new Client({
+const discordClient = new Client({
     intents: [
-        GatewayIntentBits.Guilds, // للوصول إلى الخوادم (Guilds)
-        GatewayIntentBits.GuildMessages, // للوصول إلى الرسائل في الخوادم
-        GatewayIntentBits.MessageContent // للوصول إلى محتوى الرسائل
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
     ]
 });
 
-// تهيئة المسار لقاعدة البيانات
-const dbPath = path.join(__dirname, 'storage', 'database.sqlite');
-const storage = new Keyv(`sqlite://${dbPath}`, { table: 'news' });
+const CHANNEL_ID = '1293122239964909661';
+const DISCORD_TOKEN = process.env.BOT_TOKEN;
+let allNews = [];
 
-// التحقق من وجود المجلد والملف
-async function ensureDatabaseExists() {
-    try {
-        // التحقق من وجود مجلد storage
-        await fs.access(path.join(__dirname, 'storage'));
-    } catch (err) {
-        console.log('Folder "storage" not found. Creating it...');
-        await fs.mkdir(path.join(__dirname, 'storage'), { recursive: true });
-    }
-
-    try {
-        // التحقق من وجود ملف database.sqlite
-        await fs.access(dbPath);
-    } catch (err) {
-        console.log('Database file not found. Creating a new one...');
-        await fs.writeFile(dbPath, '');
-    }
-}
-
-// تنفيذ التحقق قبل بدء التطبيق
-ensureDatabaseExists().then(() => {
-    console.log('Database setup complete.');
-}).catch(err => {
-    console.error('Error setting up database:', err);
-});
-
-// المسار لملف pins.json
-const PINS_FILE = path.join(__dirname, 'public', 'pins.json');
-
-let dailyNews = [];
-let countriesData = {};
-
-// إعداد Express
-app.use(express.static('public'));
-app.use(express.json());
-
-(async () => {
-    await storage.clear(); // للتجربة فقط، احذفها في الإنتاج
-    await storage.set('dailyNews', []);
-    const storedNews = await storage.get('dailyNews');
-    if (storedNews) dailyNews = storedNews;
-
-    const pinsData = JSON.parse(await fs.readFile(PINS_FILE, 'utf8'));
-    pinsData.pins.forEach(pin => {
-        countriesData[pin.anime] = {
-            position: pin.position,
-            primary_color: pin.primary_color,
-            secondary_color: pin.secondary_color,
-            logo_url: pin.logo_url,
-            status: 'مستقرة',
-            leader: pin.details.government.leader,
-            government: pin.details.government.description,
-            economy: `${pin.details.economy.value} - ${pin.details.economy.description}`,
-            military: `${pin.details.military.strength} - ${pin.details.military.description}`,
-            culture: pin.details.culture.description,
-            relations: {}
+function extractLocation(message) {
+    const locationRegex = /(?:in|at|near)\s+([A-Za-z\s]+(?:,\s*[A-Za-z\s]+)?)/i;
+    const match = message.match(locationRegex);
+    if (match) {
+        const location = match[1].trim();
+        const coords = {
+            "Hokkaido": { lat: 36, lon: 138 },
+            "Tokyo": { lat: 35.6762, lon: 139.6503 },
+            "Kyoto": { lat: 35.0116, lon: 135.7681 }
         };
-    });
-    io.emit('countriesUpdate', countriesData);
-})();
-
-// API Endpoints
-app.get('/pins.json', async (req, res) => {
-    try {
-        const data = await fs.readFile(PINS_FILE, 'utf8');
-        res.json(JSON.parse(data));
-    } catch (err) {
-        res.status(500).send('خطأ في قراءة البيانات');
+        return { location, coords: coords[location] || null };
     }
-});
-
-app.post('/save-pins', async (req, res) => {
-    try {
-        await fs.writeFile(PINS_FILE, JSON.stringify(req.body, null, 2), 'utf8');
-        const pinsData = req.body.pins;
-        countriesData = {};
-        pinsData.forEach(pin => {
-            countriesData[pin.anime] = {
-                position: pin.position,
-                primary_color: pin.primary_color,
-                secondary_color: pin.secondary_color,
-                logo_url: pin.logo_url,
-                status: countriesData[pin.anime]?.status || 'مستقرة',
-                leader: pin.details.government.leader,
-                government: pin.details.government.description,
-                economy: `${pin.details.economy.value} - ${pin.details.economy.description}`,
-                military: `${pin.details.military.strength} - ${pin.details.military.description}`,
-                culture: pin.details.culture.description,
-                relations: countriesData[pin.anime]?.relations || {}
-            };
-        });
-        io.emit('countriesUpdate', countriesData);
-        res.status(200).send('تم حفظ البيانات');
-    } catch (err) {
-        console.error('خطأ في حفظ البيانات:', err);
-        res.status(500).send('خطأ في حفظ البيانات');
-    }
-});
-
-// تصنيف الأخبار باستخدام Gemini
-async function classifyNews(title, description) {
-    const prompt = `
-        صنف هذا الخبر إلى "عاجل" أو "عادي"، وحدد الدول المتأثرة في عالم فيتالم:
-        العنوان: "${title}"، الوصف: "${description}".
-        أجب بـ JSON: {"type": "عاجل" أو "عادي", "affectedCountries": ["اسم الدولة", ...]}
-    `;
-    const response = await queryGemini(prompt);
-    return JSON.parse(response.trim());
+    return { location: "Unknown", coords: null };
 }
 
-// تحديث بيانات الدول بناءً على الأخبار
-async function updateCountriesData(news) {
-    const prompt = `
-        بناءً على هذا الخبر: "${news.title}: ${news.description}"،
-        حدث معلومات الدول المتأثرة في عالم فيتالم (${news.affectedCountries.join(', ')}):
-        - الحالة (مثل مستقرة، في حرب)
-        - العلاقات بين الدول (مثل حلفاء، أعداء)
-        - الاقتصاد، العسكرية، الثقافة إذا تأثرت.
-        أجب بـ JSON: [{"country": "اسم الدولة", "status": "جديدة", "relations": {"دولة أخرى": "علاقة"}, "economy": "وصف", "military": "وصف", "culture": "وصف"}]
-    `;
-    const response = await queryGemini(prompt);
-    const updates = JSON.parse(response.trim());
-    updates.forEach(update => {
-        if (countriesData[update.country]) {
-            countriesData[update.country] = {
-                ...countriesData[update.country],
-                status: update.status,
-                relations: update.relations,
-                economy: update.economy,
-                military: update.military,
-                culture: update.culture
-            };
-        }
-    });
-    io.emit('countriesUpdate', countriesData);
-}
+discordClient.once('ready', () => {
+    console.log('Discord bot is ready!');
+});
 
-// الاستماع إلى رسائل Discord
-client.on('messageCreate', async (message) => {
-    if (message.channel.id === '1293122239964909661' && message.author.bot) {
-        message.embeds.forEach(async embed => {
-            if (!embed.description) return;
-            const classification = await classifyNews(embed.title || '', embed.description);
-            const news = {
-                title: embed.title || 'بدون عنوان',
-                description: embed.description,
-                image: embed.image ? embed.image.url : null,
-                timestamp: new Date().toLocaleString('ar-SA'),
-                type: classification.type === 'عاجل' ? 'urgent' : 'normal',
-                affectedCountries: classification.affectedCountries || []
-            };
-            if (!dailyNews.some(n => n.title === news.title && n.timestamp === news.timestamp)) {
-                dailyNews.unshift(news);
-                io.emit('newNews', news);
-                await updateCountriesData(news);
-                await storage.set('dailyNews', dailyNews);
+discordClient.on('messageCreate', async (message) => {
+    if (message.channel.id !== CHANNEL_ID || message.author.bot) return;
+
+    const embed = message.embeds[0];
+    if (!embed) return;
+
+    const { location, coords } = extractLocation(embed.description || embed.title || '');
+    const type = embed.title.includes('Breaking') ? 'breaking' : 'regular';
+
+    const news = {
+        title: embed.title || 'بدون عنوان',
+        description: embed.description || '',
+        image: embed.image ? embed.image.url : null,
+        imageWidth: embed.image ? embed.image.width : null,
+        imageHeight: embed.image ? embed.image.height : null,
+        timestamp: new Date().toLocaleString('ar-SA'),
+        type,
+        location,
+        lat: coords ? coords.lat : null,
+        lon: coords ? coords.lon : null,
+        primary_color: '#ff4500',
+        secondary_color: '#000000',
+        logo_url: embed.image ? embed.image.url : 'https://via.placeholder.com/80',
+        details: {
+            economy: {
+                value: "متوسط (~50 مليار دولار)",
+                description: `تعتمد على الأخشاب وصيد الأسماك في ${location}، لكن العزلة تحد من التجارة`
+            },
+            military: {
+                strength: "متوسط (~60,000)",
+                description: `الأراضي الشاسعة في ${location} تتيح أعدادًا كبيرة، لكن البرد يعوق اللوجستيات`
+            },
+            culture: {
+                description: `حدود شمالية برية في ${location}، تنوعها تحت قيادة ميليوداس`
+            },
+            government: {
+                leader: "ميليوداس",
+                description: "دولة الشياطين (مجتمع الطليعة الأثيري)"
             }
-        });
-    }
+        }
+    };
+
+    allNews.unshift(news);
+    io.emit('newNews', news);
 });
 
-// تسجيل الدخول باستخدام BOT_TOKEN من Environment Variables
-client.login(process.env.BOT_TOKEN);
+app.use(express.static(__dirname));
 
-// تشغيل الخادم
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/index.html');
+});
+
+io.on('connection', (socket) => {
+    console.log('A user connected');
+    socket.emit('loadNews', allNews);
+});
+
+discordClient.login(DISCORD_TOKEN);
+
+server.listen(3000, () => {
+    console.log('Server running on port 3000');
+});
