@@ -11,7 +11,8 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 const client = new Client();
-const storage = new Keyv('sqlite://storage/database.sqlite', { table: 'news' });
+const dbPath = path.join(__dirname, 'storage', 'database.sqlite');
+const storage = new Keyv(`sqlite://${dbPath}`, { table: 'news' });
 const PINS_FILE = path.join(__dirname, 'public', 'pins.json');
 
 let dailyNews = [];
