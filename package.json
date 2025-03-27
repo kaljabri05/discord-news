@@ -1,19 +1,19 @@
 {
-  "name": "discord-news",
+  "name": "vitalm-news",
   "version": "1.0.0",
-  "main": "index.js", 
+  "main": "index.js",
   "scripts": {
-    "start": "node index.js"
-  },
-  "engines": {
-    "node": ">=18.18.0 <19.0.0" 
+    "start": "node index.js",
+    "build": "npm install"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.2.0",
-    "@keyv/sqlite": "^3.6.7",
-    "discord.js": "^14.13.0",
-    "express": "^4.18.2",
-    "keyv": "^4.5.4",
+    "axios": "^1.6.8",
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
     "socket.io": "^4.7.5"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }
