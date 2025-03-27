@@ -1,7 +1,7 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const { Client, GatewayIntentBits } = require('discord.js-selfbot-v13');
+const { Client } = require('discord.js-selfbot-v13');
 const Keyv = require('keyv');
 const fs = require('fs').promises;
 const path = require('path');
@@ -12,14 +12,8 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-// تهيئة Discord Self-Bot Client مع النوايا
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds, // للوصول إلى الخوادم (Guilds)
-        GatewayIntentBits.GuildMessages, // للوصول إلى الرسائل في الخوادم
-        GatewayIntentBits.MessageContent // للوصول إلى محتوى الرسائل
-    ]
-});
+// تهيئة Discord Self-Bot Client بدون نوايا
+const client = new Client();
 
 // تهيئة المسار لقاعدة البيانات
 const dbPath = path.join(__dirname, 'storage', 'database.sqlite');
