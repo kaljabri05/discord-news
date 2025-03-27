@@ -3,94 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>خريطة عالم فيتالم</title>
+    <title>عالم فيتالم - الأخبار والدبابيس</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        :root {
-            --primary-color: #8f5922;
-            --secondary-color: #fffef0;
-            --shadow-color: #432100;
-            --accent-color: #d4a373;
-            --font-size: clamp(12px, 2.5vw, 16px);
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body {
-            height: 100%;
-            width: 100%;
-            overflow: hidden;
-            background: linear-gradient(135deg, #1a0f00, #3d2600);
-            font-family: 'Amiri', serif;
-        }
-        #container {
-            display: flex;
-            height: 100vh;
-            width: 100%;
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f9fa;
         }
         #map {
-            flex: 3;
-            height: 100%;
-            border: 2px solid var(--primary-color);
+            height: 100vh;
+            border: none;
         }
-        #news-container {
-            flex: 1;
-            background: rgba(255, 254, 240, 0.95);
+        .news-container {
+            max-height: 100vh;
             overflow-y: auto;
-            padding: 1em;
-            border-left: 2px solid var(--primary-color);
         }
         .news-item {
             background: #fff;
-            margin-bottom: 1em;
-            padding: 1em;
-            border-radius: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            padding: 1rem;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            position: relative;
         }
-        .news-item.urgent { border: 2px solid #ff4500; }
-        .news-item h3 {
-            font-size: calc(var(--font-size) * 1.1);
-            color: var(--primary-color);
-            margin-bottom: 0.5em;
+        .news-item.urgent {
+            border-left: 5px solid #dc3545;
         }
-        .news-item p { font-size: var(--font-size); color: #333; }
-        .news-item img { max-width: 100%; border-radius: 5px; margin-top: 0.5em; }
-        .news-item .timestamp {
-            font-size: calc(var(--font-size) * 0.8);
-            color: #777;
-            position: absolute;
-            bottom: 5px;
-            left: 10px;
+        .news-item.normal {
+            border-left: 5px solid #198754;
         }
-        .modern-popup {
-            background: rgba(255, 254, 240, 0.95);
-            padding: 1em;
-            border-radius: 10px;
-            border: 2px solid var(--primary-color);
-            max-width: 300px;
-            text-align: right;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        .news-item img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 0.5rem;
         }
-        .modern-popup h3 { font-size: calc(var(--font-size) * 1.2); color: var(--primary-color); text-align: center; }
-        .modern-popup p { font-size: var(--font-size); color: #333; margin: 0.5em 0; }
-        .modern-popup img { max-width: 100px; display: block; margin: 0 auto; }
+        .timestamp {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+        @media (max-width: 768px) {
+            #container {
+                flex-direction: column;
+            }
+            #map {
+                height: 50vh;
+            }
+        }
     </style>
 </head>
 <body>
-    <div id="container">
-        <div id="map"></div>
-        <div id="news-container"></div>
+    <div class="container-fluid p-0" id="container">
+        <!-- القسم الأيسر: الخريطة -->
+        <div class="col-md-8 p-0" id="map"></div>
+
+        <!-- القسم الأيمن: الأخبار -->
+        <div class="col-md-4 bg-light news-container">
+            <div class="p-3">
+                <h4 class="text-center mb-4">الأخبار</h4>
+                <div id="news-list"></div>
+            </div>
+        </div>
     </div>
 
+    <!-- Bootstrap JS and Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Leaflet JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <!-- Socket.IO -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
     <script>
         const socket = io();
-        const newsContainer = document.getElementById('news-container');
+        const newsContainer = document.getElementById('news-list');
         let allNews = [];
 
-        const map = L.map('map', { attributionControl: false, zoomControl: false }).setView([36, 138], 5);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, minZoom: 1, opacity: 0.5 }).addTo(map);
+        // إعداد الخريطة
+        const map = L.map('map').setView([36, 138], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            minZoom: 1,
+            opacity: 0.5
+        }).addTo(map);
 
         let markers = [];
         function updateMapPins(countries) {
@@ -115,36 +112,37 @@
                     })
                 }).addTo(map);
                 marker.bindPopup(`
-                    <div class="modern-popup">
-                        <h3>${country}</h3>
-                        ${data.logo_url ? `<img src="${data.logo_url}" alt="${country} logo"/>` : ''}
+                    <div class="text-center">
+                        <h5>${country}</h5>
+                        ${data.logo_url ? `<img src="${data.logo_url}" alt="${country} logo" class="img-fluid mb-2"/>` : ''}
                         <p><strong>الحالة:</strong> ${data.status}</p>
                         <p><strong>الاقتصاد:</strong> ${data.economy}</p>
                         <p><strong>العسكرية:</strong> ${data.military}</p>
                         <p><strong>الثقافة:</strong> ${data.culture}</p>
                         <p><strong>الحكومة:</strong> ${data.government} - ${data.leader}</p>
-                        <p><strong>العلاقات:</strong> ${JSON.stringify(data.relations)}</p>
                     </div>
                 `);
                 markers.push(marker);
             });
         }
 
+        // عرض الأخبار
         function renderNews(newsArray) {
             newsContainer.innerHTML = '';
             newsArray.forEach(news => {
                 const newsItem = document.createElement('div');
                 newsItem.className = `news-item ${news.type}`;
                 newsItem.innerHTML = `
-                    <h3>${news.title}</h3>
+                    <h5>${news.title}</h5>
                     <p>${news.description}</p>
                     ${news.image ? `<img src="${news.image}" alt="صورة الخبر"/>` : ''}
-                    <span class="timestamp">${news.timestamp}</span>
+                    <small class="timestamp">${news.timestamp}</small>
                 `;
                 newsContainer.appendChild(newsItem);
             });
         }
 
+        // استقبال الأخبار من الخادم
         socket.on('loadNews', (newsArray) => {
             allNews = newsArray;
             renderNews(allNews);
