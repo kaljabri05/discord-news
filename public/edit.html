@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>تعديل خريطة عالم فيتالم</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #8f5922;
+            --secondary-color: #fffef0;
+            --shadow-color: #432100;
+            --accent-color: #d4a373;
+            --font-size: clamp(12px, 2.5vw, 16px);
+            --btn-size: clamp(40px, 10vw, 50px);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a0f00, #3d2600);
+            font-family: 'Amiri', serif;
+        }
+        #map {
+            height: 100vh;
+            width: 100%;
+            border: 2px solid var(--primary-color);
+        }
+        .floating-btn {
+            position: fixed;
+            z-index: 1000;
+            background: var(--primary-color);
+            color: var(--secondary-color);
+            border: none;
+            border-radius: 50%;
+            width: var(--btn-size);
+            height: var(--btn-size);
+            font-size: clamp(1em, 3vw, 1.5em);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s ease;
+            cursor: pointer;
+        }
+        .floating-btn:hover { transform: scale(1.1); background: var(--accent-color); }
+        #add-pin-btn { bottom: calc(var(--btn-size) * 2 + 30px); right: 10px; }
+        #add-line-btn { bottom: calc(var(--btn-size) + 20px); right: 10px; }
+        #save-all-btn { bottom: 10px; right: 10px; }
+        .popup-content {
+            background: rgba(255, 254, 240, 0.95);
+            padding: 1em;
+            border-radius: 10px;
+            border: 2px solid var(--primary-color);
+            max-width: 300px;
+            text-align: right;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        .popup-content img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 2px solid var(--primary-color);
+            display: block;
+            margin: 0 auto 0.5em;
+        }
+        .popup-content h3 {
+            font-size: calc(var(--font-size) * 1.2);
+            color: var(--primary-color);
+            margin-bottom: 0.5em;
+            text-align: center;
+        }
+        .popup-section {
+            margin-bottom: 0.8em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .popup-section span {
+            font-size: var(--font-size);
+            color: #333;
+            flex: 1;
+        }
+        .edit-btn {
+            background: var(--accent-color);
+            color: #fff;
+            border: none;
+            padding: 0.3em 0.6em;
+            border-radius: 5px;
+            font-size: calc(var(--font-size) * 0.9);
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        .edit-btn:hover { background: var(--primary-color); }
+        .popup-content a {
+            display: block;
+            text-align: center;
+            background: var(--primary-color);
+            color: var(--secondary-color);
+            padding: 0.5em;
+            border-radius: 5px;
+            text-decoration: none;
+            margin: 0.5em 0;
+        }
+        .popup-controls {
+            border-top: 1px solid var(--primary-color);
+            padding-top: 0.5em;
+        }
+        .popup-controls label {
+            font-size: calc(var(--font-size) * 0.9);
+            color: var(--primary-color);
+            display: block;
+            margin: 0.3em 0;
+        }
+        .popup-controls input[type="file"],
+        .popup-controls input[type="url"],
+        .popup-controls input[type="color"] {
+            width: 100%;
+            padding: 0.3em;
+            margin: 0.2em 0;
+            border: 1px solid var(--primary-color);
+            border-radius: 5px;
+            font-size: var(--font-size);
+        }
+        .edit-overlay {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            max-width: 100%;
+            height: 80vh;
+            background: rgba(255, 254, 240, 0.98);
+            border-top: 3px solid var(--primary-color);
+            box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.2);
+            padding: 1em;
+            overflow-y: auto;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            border-radius: 15px 15px 0 0;
+        }
+        .edit-overlay.active { transform: translateY(0); }
+        .edit-overlay h5 {
+            color: var(--primary-color);
+            font-size: clamp(1.2em, 3vw, 1.5em);
+            text-align: center;
+            margin-bottom: 0.5em;
+        }
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: var(--primary-color);
+            color: var(--secondary-color);
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+        .form-control {
+            width: 100%;
+            padding: 0.5em;
+            margin: 0.3em 0;
+            border: 1px solid var(--primary-color);
+            border-radius: 5px;
+            font-size: var(--font-size);
+            background: #fff;
+        }
+        .form-control:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 5px rgba(212, 163, 115, 0.5);
+            outline: none;
+        }
+        textarea.form-control { min-height: 60px; resize: vertical; }
+        .btn {
+            width: 100%;
+            padding: 0.6em;
+            border-radius: 5px;
+            font-size: var(--font-size);
+            margin: 0.5em 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-primary { background: var(--primary-color); color: #fff; border: none; }
+        .btn-primary:hover { background: var(--accent-color); transform: scale(1.02); }
+        @media (min-width: 768px) {
+            .edit-overlay { max-width: 500px; left: 50%; transform: translateX(-50%) translateY(100%); }
+            .edit-overlay.active { transform: translateX(-50%) translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <button id="add-pin-btn" class="floating-btn" title="إضافة دبوس">+</button>
+    <button id="add-line-btn" class="floating-btn" title="إضافة خط">/</button>
+    <button id="save-all-btn" class="floating-btn" title="حفظ الكل">💾</button>
+
+    <div id="pin-overlay" class="edit-overlay">
+        <button class="close-btn" onclick="closeOverlay('pin-overlay')">×</button>
+        <h5>تعديل القسم</h5>
+        <form id="pin-section-form">
+            <input type="hidden" id="section-type">
+            <div id="pin-section-fields"></div>
+            <button type="button" class="btn btn-primary" id="save-section">حفظ التغييرات</button>
+        </form>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script>
+        const map = L.map('map', { attributionControl: false, zoomControl: true }).setView([36, 138], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
+
+        let pins = [];
+        let lines = [];
+        let markers = [];
+        let polylines = [];
+        let currentPin = null;
+        let tempPin = null;
+
+        fetch('/pins.json')
+            .then(response => response.json())
+            .then(data => {
+                pins = data.pins || [];
+                lines = data.lines || [];
+                renderPins();
+                renderLines();
+            })
+            .catch(err => console.error('خطأ في تحميل البيانات:', err));
+
+        function createPinSvg(pin) {
+            return `
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+                    <g transform="scale(0.35)">
+                        <ellipse cx="44.996" cy="82.095" rx="25.776" ry="7.325" style="fill: ${pin.secondary_color};"/>
+                        <path d="M 45 1 C 27.117 1 12.619 15.498 12.619 33.381 c 0 7.984 2.903 15.28 7.693 20.926 L 45 83.383 l 24.687 -29.077 c 4.79 -5.645 7.693 -12.942 7.693 -20.926 C 77.382 15.498 62.884 1 45 1 z" style="fill: ${pin.primary_color};"/>
+                        <circle cx="44.998" cy="32.268" r="22.468" style="fill: rgb(255,255,255);"/>
+                        <image href="${pin.logo_url}" x="37.089" y="23.543" width="15.75" height="15.75" transform="matrix(2.582769, 0, 0, 2.54471, -71.109339, -47.281293)"/>
+                    </g>
+                </svg>
+            `;
+        }
+
+        function renderPins() {
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+            pins.forEach((pin, index) => {
+                const marker = L.marker(pin.position, {
+                    icon: L.divIcon({
+                        html: createPinSvg(pin),
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 32]
+                    }),
+                    draggable: true
+                }).addTo(map);
+
+                marker.on('dragend', (e) => {
+                    pin.position = [e.target.getLatLng().lat, e.target.getLatLng().lng];
+                    if (currentPin === index) updatePinPopup(pin);
+                });
+
+                marker.on('click', () => {
+                    currentPin = index;
+                    updatePinPopup(pin);
+                });
+
+                marker.bindPopup(createPopupContent(pin, index));
+                markers.push(marker);
+            });
+
+            if (tempPin) renderTempPin();
+        }
+
+        function createPopupContent(pin, index) {
+            return `
+                <div class="popup-content">
+                    <img src="${pin.logo_url}" alt="${pin.anime}">
+                    <h3>${pin.details.government.description}</h3>
+                    <div class="popup-section">
+                        <span>الاقتصاد: ${pin.details.economy.value} - ${pin.details.economy.description}</span>
+                        <button class="edit-btn" onclick="editSection('economy', ${index})">تعديل</button>
+                    </div>
+                    <div class="popup-section">
+                        <span>العسكرية: ${pin.details.military.strength} - ${pin.details.military.description}</span>
+                        <button class="edit-btn" onclick="editSection('military', ${index})">تعديل</button>
+                    </div>
+                    <div class="popup-section">
+                        <span>الثقافة: ${pin.details.culture.description}</span>
+                        <button class="edit-btn" onclick="editSection('culture', ${index})">تعديل</button>
+                    </div>
+                    <div class="popup-section">
+                        <span>الحكومة: ${pin.details.government.leader} - ${pin.details.government.description}</span>
+                        <button class="edit-btn" onclick="editSection('government', ${index})">تعديل</button>
+                    </div>
+                    <a href="${pin.anime_link}" target="_blank">زيارة الويكي</a>
+                    <div class="popup-controls">
+                        <label>رفع شعار جديد</label>
+                        <input type="file" id="logo-upload-${index}" accept="image/*" onchange="updateLogo(${index}, this)">
+                        <label>تغيير الرابط</label>
+                        <input type="url" id="link-input-${index}" value="${pin.anime_link}" oninput="updateLink(${index}, this.value)">
+                        <label>اللون الأساسي</label>
+                        <input type="color" id="primary-color-${index}" value="${pin.primary_color}" oninput="updateColors(${index}, this.value, null)">
+                        <label>اللون الثانوي</label>
+                        <input type="color" id="secondary-color-${index}" value="${pin.secondary_color}" oninput="updateColors(${index}, null, this.value)">
+                    </div>
+                </div>
+            `;
+        }
+
+        function updatePinPopup(pin) {
+            markers[currentPin].getPopup().setContent(createPopupContent(pin, currentPin));
+        }
+
+        function renderTempPin() {
+            if (tempPin.marker) map.removeLayer(tempPin.marker);
+            tempPin.marker = L.marker(tempPin.position, {
+                icon: L.divIcon({
+                    html: createPinSvg(tempPin),
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 32]
+                }),
+                draggable: true
+            }).addTo(map);
+
+            tempPin.marker.on('dragend', (e) => {
+                tempPin.position = [e.target.getLatLng().lat, e.target.getLatLng().lng];
+            });
+        }
+
+        function renderLines() {
+            polylines.forEach(polyline => map.removeLayer(polyline));
+            polylines = [];
+            lines.forEach((line, index) => {
+                const polyline = L.polyline(line.coordinates, {
+                    color: line.color,
+                    weight: 3,
+                    opacity: 0.8
+                }).addTo(map);
+                polylines.push(polyline);
+            });
+        }
+
+        function editSection(section, index) {
+            currentPin = index;
+            const pin = pins[index];
+            document.getElementById('section-type').value = section;
+            const fieldsDiv = document.getElementById('pin-section-fields');
+            fieldsDiv.innerHTML = '';
+
+            if (section === 'economy') {
+                fieldsDiv.innerHTML = `
+                    <label>القيمة</label>
+                    <input type="text" class="form-control" id="section-value" value="${pin.details.economy.value}">
+                    <label>الوصف</label>
+                    <textarea class="form-control" id="section-desc">${pin.details.economy.description}</textarea>
+                `;
+            } else if (section === 'military') {
+                fieldsDiv.innerHTML = `
+                    <label>القوة</label>
+                    <input type="text" class="form-control" id="section-value" value="${pin.details.military.strength}">
+                    <label>الوصف</label>
+                    <textarea class="form-control" id="section-desc">${pin.details.military.description}</textarea>
+                `;
+            } else if (section === 'culture') {
+                fieldsDiv.innerHTML = `
+                    <label>الوصف</label>
+                    <textarea class="form-control" id="section-desc">${pin.details.culture.description}</textarea>
+                `;
+            } else if (section === 'government') {
+                fieldsDiv.innerHTML = `
+                    <label>الزعيم</label>
+                    <input type="text" class="form-control" id="section-value" value="${pin.details.government.leader}">
+                    <label>الوصف</label>
+                    <textarea class="form-control" id="section-desc">${pin.details.government.description}</textarea>
+                `;
+            }
+
+            document.getElementById('pin-overlay').classList.add('active');
+        }
+
+        document.getElementById('save-section').onclick = async () => {
+            const section = document.getElementById('section-type').value;
+            const pin = pins[currentPin];
+            const value = document.getElementById('section-value')?.value || '';
+            const desc = document.getElementById('section-desc').value;
+
+            if (section === 'economy') {
+                pin.details.economy.value = value;
+                pin.details.economy.description = desc;
+            } else if (section === 'military') {
+                pin.details.military.strength = value;
+                pin.details.military.description = desc;
+            } else if (section === 'culture') {
+                pin.details.culture.description = desc;
+            } else if (section === 'government') {
+                pin.details.government.leader = value;
+                pin.details.government.description = desc;
+            }
+
+            updatePinPopup(pin);
+            renderPins();
+            await saveData();
+            closeOverlay('pin-overlay');
+        };
+
+        function updateLogo(index, input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    pins[index].logo_url = e.target.result;
+                    updatePinPopup(pins[index]);
+                    renderPins();
+                    saveData().then(() => alert('تم تحديث الصورة وحفظها بنجاح!')).catch(err => {
+                        console.error('خطأ في حفظ الصورة:', err);
+                        alert('حدث خطأ أثناء حفظ الصورة!');
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function updateLink(index, value) {
+            pins[index].anime_link = value;
+            updatePinPopup(pins[index]);
+            saveData();
+        }
+
+        function updateColors(index, primary, secondary) {
+            if (primary) pins[index].primary_color = primary;
+            if (secondary) pins[index].secondary_color = secondary;
+            updatePinPopup(pins[index]);
+            renderPins();
+            saveData();
+        }
+
+        document.getElementById('add-pin-btn').onclick = () => {
+            currentPin = null;
+            tempPin = {
+                position: [map.getCenter().lat, map.getCenter().lng],
+                anime: 'دبوس جديد',
+                primary_color: '#8f5922',
+                secondary_color: '#fffef0',
+                logo_url: 'https://via.placeholder.com/50',
+                anime_link: '#',
+                details: {
+                    economy: { value: '', description: '' },
+                    military: { strength: '', description: '' },
+                    culture: { description: '' },
+                    government: { leader: '', description: '' }
+                }
+            };
+            pins.push(tempPin);
+            currentPin = pins.length - 1;
+            renderPins();
+            markers[currentPin].openPopup();
+        };
+
+        document.getElementById('add-line-btn').onclick = () => {
+            alert('إضافة الخطوط غير مفعلة حاليًا. يمكن تطويرها لاحقًا!');
+        };
+
+        document.getElementById('save-all-btn').onclick = async () => {
+            await saveData();
+            alert('تم حفظ جميع التغييرات!');
+        };
+
+        async function saveData() {
+            const data = { pins, lines };
+            try {
+                const response = await fetch('/save-pins', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data, null, 2)
+                });
+                if (!response.ok) throw new Error('فشل في حفظ البيانات');
+            } catch (err) {
+                console.error('خطأ في حفظ البيانات:', err);
+                throw err;
+            }
+        }
+
+        function closeOverlay(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+    </script>
+</body>
+</html>
