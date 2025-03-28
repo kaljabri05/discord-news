@@ -1,446 +1,382 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>أخبار عالم فيتالم</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --fontSize: calc((1vw + 1vh) * .75);
-            --primary-color: #8f5922;
-            --secondary-color: #fffef0;
-            --shadow-color: #432100;
-            --accent-color: #d4a373;
-        }
-        *, *:before, *:after {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        html, body {
-            height: 100%;
-            width: 100%;
-            overflow: hidden;
-            background: linear-gradient(135deg, #1a0f00, #3d2600);
-            color: var(--shadow-color);
-            font-family: 'Amiri', serif;
-            font-size: 16px;
-        }
-        main {
-            position: relative;
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            overflow-y: auto;
-        }
-        #parchment {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            padding: 1em;
-            box-shadow: inset 0 0 50px rgba(143, 89, 34, 0.5);
-            background: var(--secondary-color);
-            filter: url(#wavy2);
-            border-radius: 15px;
-        }
-        #contain {
-            position: relative;
-            width: 100%;
-            max-width: 1200px;
-            height: 100%;
-            z-index: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 1em;
-        }
-        #header {
-            position: sticky;
-            top: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 0.5em 0;
-            background: rgba(255, 254, 240, 0.9);
-            z-index: 1000;
-        }
-        .inkTitle {
-            font-size: clamp(1.2rem, calc(var(--fontSize) * 1.6), 2rem);
-            font-weight: 700;
-            color: var(--primary-color);
-            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4);
-            padding: 0.3em 1em;
-            border-radius: 20px;
-            box-shadow: 0 2px 10px rgba(143, 89, 34, 0.3);
-        }
-        #news-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 1em 0;
-            width: 100%;
-        }
-        .news-item {
-            background: rgba(255, 254, 240, 0.95);
-            border: 2px solid var(--primary-color);
-            border-radius: 15px;
-            padding: 1em;
-            margin-bottom: 1em;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            cursor: pointer;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        .news-item:hover {
-            transform: scale(1.02);
-            box-shadow: 0 6px 15px rgba(143, 89, 34, 0.5);
-        }
-        .news-title {
-            font-size: clamp(1rem, calc(var(--fontSize) * 1.2), 1.5rem);
-            color: var(--primary-color);
-            margin-bottom: 0.5em;
-        }
-        .news-description {
-            font-size: clamp(0.8rem, calc(var(--fontSize) * 0.9), 1rem);
-            color: var(--shadow-color);
-        }
-        .news-image {
-            max-width: 100%;
-            height: auto;
-            border-radius: 10px;
-            margin-top: 0.5em;
-        }
-        .timestamp {
-            font-size: clamp(0.7rem, calc(var(--fontSize) * 0.8), 0.9rem);
-            color: #7f8c8d;
-            margin-top: 0.5em;
-        }
-        #map {
-            height: 40vh;
-            width: 100%;
-            margin: 1em 0;
-            border: 4px solid var(--primary-color);
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-            transition: height 0.3s ease;
-        }
-        #map.fullscreen {
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            z-index: 2000;
-        }
-        .modern-popup {
-            background: linear-gradient(135deg, rgba(255, 254, 240, 0.9), rgba(143, 89, 34, 0.2));
-            padding: 1.5em;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            max-width: 320px;
-            text-align: right;
-        }
-        .logo-container {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            overflow: hidden;
-            margin: 0 auto 1em;
-            border: 3px solid var(--primary-color);
-        }
-        .modern-logo {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .modern-popup h3 {
-            font-size: clamp(1rem, calc(var(--fontSize) * 1.3), 1.5rem);
-            margin-bottom: 0.7em;
-            color: var(--primary-color);
-        }
-        .section-title {
-            font-size: clamp(0.9rem, calc(var(--fontSize) * 1), 1.2rem);
-            font-weight: 700;
-            padding: 0.4em;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 8px;
-            cursor: pointer;
-        }
-        .section-content {
-            display: none;
-            padding: 0.6em;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 5px;
-            font-size: clamp(0.8rem, calc(var(--fontSize) * 0.9), 1rem);
-        }
-        .leaflet-popup-content-wrapper {
-            background: transparent !important;
-            box-shadow: none !important;
-            padding: 0 !important;
-        }
-        .leaflet-popup-tip-container {
-            display: none !important;
-        }
-        #assistant-button {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            width: clamp(50px, 10vw, 60px);
-            height: clamp(50px, 10vw, 60px);
-            background: var(--primary-color);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-            cursor: pointer;
-            z-index: 2000;
-        }
-        #assistant-button img {
-            width: 60%;
-            height: 60%;
-        }
-        #assistant-modal {
-            display: none;
-            position: fixed;
-            bottom: 90px;
-            left: 20px;
-            width: clamp(250px, 80vw, 300px);
-            height: clamp(300px, 60vh, 400px);
-            background: var(--secondary-color);
-            border: 2px solid var(--primary-color);
-            border-radius: 15px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-            z-index: 2000;
-            padding: 1em;
-            overflow-y: auto;
-        }
-        #assistant-input {
-            width: 100%;
-            padding: 0.5em;
-            margin-bottom: 0.5em;
-            border: 1px solid var(--primary-color);
-            border-radius: 5px;
-            font-family: 'Amiri', serif;
-            font-size: clamp(0.8rem, 1rem, 1.2rem);
-        }
-        #assistant-response {
-            font-size: clamp(0.8rem, calc(var(--fontSize) * 0.9), 1rem);
-            color: var(--shadow-color);
-        }
-        button {
-            padding: 0.5em 1em;
-            background: var(--primary-color);
-            color: var(--secondary-color);
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        #map-toggle {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 40px;
-            height: 40px;
-            background: var(--primary-color);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--secondary-color);
-            cursor: pointer;
-            z-index: 1001;
-        }
-        @media (max-width: 768px) {
-            #map {
-                height: 30vh;
-            }
-            #news-container {
-                padding: 0.5em 0;
-            }
-            .news-item {
-                padding: 0.8em;
-            }
-            #assistant-modal {
-                bottom: 80px;
-                left: 10px;
-                width: 90vw;
-            }
-            #assistant-button {
-                bottom: 10px;
-                left: 10px;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>أخبار الجريدة</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #e0eafc, #cfdef3);
+      color: #2c3e50;
+      font-family: 'Tajawal', sans-serif;
+      margin: 0;
+      padding: 10px;
+      direction: rtl;
+    }
+    h1 {
+      text-align: center;
+      font-size: 2em;
+      color: #34495e;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    #news-container {
+      max-width: 100%;
+      margin: 0 auto;
+    }
+    .news-page {
+      display: none;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 15px;
+    }
+    .news-page.active {
+      display: grid;
+    }
+    .news-article {
+      background: white;
+      border-radius: 8px;
+      padding: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      cursor: pointer;
+      animation: fadeIn 0.5s ease;
+      display: flex;
+      flex-direction: column;
+      height: 220px; /* ارتفاع موحد */
+    }
+    .news-article.urgent {
+      border: 2px solid #e74c3c;
+      background: #fff1f1;
+      animation: glow 1.5s infinite alternate;
+    }
+    .news-article h2 {
+      margin: 0 0 5px;
+      font-size: 1.2em;
+      color: #e74c3c;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .news-article p {
+      margin: 5px 0;
+      font-size: 0.9em;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      flex-grow: 1;
+    }
+    .news-article img {
+      width: 100%;
+      height: 120px; /* ارتفاع موحد للصور */
+      object-fit: cover; /* لضمان تناسق الصور */
+      border-radius: 5px;
+      margin-top: 5px;
+    }
+    /* نافذة التفاصيل */
+    #news-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      max-width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      animation: slideIn 0.3s ease;
+    }
+    .modal-content h2 { font-size: 1.5em; color: #e74c3c; }
+    .modal-content p { font-size: 1em; }
+    .modal-content img { max-width: 100%; }
+    .modal-content .timestamp { font-size: 0.9em; color: #7f8c8d; }
+    /* الأزرار العائمة */
+    .floating-buttons {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      display: flex;
+      gap: 10px;
+    }
+    .floating-btn {
+      padding: 10px 20px;
+      font-size: 0.9em;
+      color: white;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    .floating-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    #chat-btn { background: #3498db; }
+    #summarize-btn { background: #2ecc71; }
+    /* نافذة الشات */
+    #chat-container {
+      display: none;
+      position: fixed;
+      bottom: 70px;
+      right: 10px;
+      width: 90%;
+      max-width: 300px;
+      background: white;
+      border-radius: 10px;
+      padding: 10px;
+      box-shadow: 0 2px 15px rgba(0,0,0,0.2);
+    }
+    #chat-container h3 { margin: 0 0 10px; font-size: 1.1em; color: #34495e; }
+    #chat-messages {
+      height: 150px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+      padding: 5px;
+    }
+    .chat-bubble {
+      margin: 5px 0;
+      padding: 8px;
+      border-radius: 12px;
+      max-width: 80%;
+      word-wrap: break-word;
+    }
+    .chat-bubble.user {
+      background: #3498db;
+      color: white;
+      margin-left: auto;
+      text-align: right;
+    }
+    .chat-bubble.bot {
+      background: #ecf0f1;
+      color: #2c3e50;
+      margin-right: auto;
+    }
+    #chat-input {
+      width: 65%;
+      padding: 6px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    #chat-send {
+      padding: 6px 12px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #chat-send:hover { background: #2980b9; }
+    /* نافذة التلخيص */
+    #summary-container {
+      display: none;
+      position: fixed;
+      bottom: 70px;
+      right: 10px;
+      width: 90%;
+      max-width: 300px;
+      background: #ffeaa7;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 2px 15px rgba(0,0,0,0.2);
+      text-align: center;
+      font-size: 0.9em;
+    }
+    /* أزرار التصفح */
+    #pagination {
+      text-align: center;
+      margin: 15px 0;
+    }
+    #pagination button {
+      padding: 8px 15px;
+      background: #34495e;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 0 5px;
+    }
+    #pagination button:hover { background: #2c3e50; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes glow {
+      from { box-shadow: 0 0 3px #e74c3c; }
+      to { box-shadow: 0 0 10px #e74c3c; }
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media (max-width: 600px) {
+      h1 { font-size: 1.5em; }
+      .news-article {
+        padding: 8px;
+        height: 180px; /* ارتفاع أصغر للهاتف */
+      }
+      .news-article h2 { font-size: 1em; }
+      .news-article p { font-size: 0.8em; }
+      .news-article img { height: 100px; }
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <main>
-        <div id="parchment"></div>
-        <div id="contain">
-            <div id="header">
-                <p class="inkTitle">أخبار عالم فيتالم</p>
-            </div>
-            <div id="news-container"></div>
-            <div id="map">
-                <div id="map-toggle" onclick="toggleMapFullscreen()">⛶</div>
-            </div>
-        </div>
-    </main>
-
-    <div id="assistant-button" onclick="toggleAssistantModal()">
-        <img src="https://via.placeholder.com/40" alt="مساعد">
+  <h1>أخبار الجريدة</h1>
+  <div id="news-container"></div>
+  <div id="pagination">
+    <button id="prev-btn">السابق</button>
+    <button id="next-btn">التالي</button>
+  </div>
+  <div id="news-modal">
+    <div class="modal-content">
+      <h2 id="modal-title"></h2>
+      <p id="modal-description"></p>
+      <img id="modal-image" src="" alt="">
+      <p class="timestamp" id="modal-timestamp"></p>
     </div>
-    <div id="assistant-modal">
-        <h3>المساعد الشخصي</h3>
-        <input type="text" id="assistant-input" placeholder="اسأل عن الأخبار...">
-        <button onclick="askAssistant()">إرسال</button>
-        <div id="assistant-response"></div>
-    </div>
+  </div>
+  <div class="floating-buttons">
+    <button id="chat-btn" class="floating-btn" onclick="toggleChat()">مسؤول الأخبار</button>
+    <button id="summarize-btn" class="floating-btn" onclick="toggleSummary()">التلخيص</button>
+  </div>
+  <div id="chat-container">
+    <h3>مسؤول الأخبار</h3>
+    <div id="chat-messages"></div>
+    <input id="chat-input" type="text" placeholder="اكتب سؤالك هنا...">
+    <button id="chat-send" onclick="sendMessage()">إرسال</button>
+  </div>
+  <div id="summary-container"></div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const socket = io();
-        let map;
-        let markers = [];
-        let allNews = [];
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const newsContainer = document.getElementById('news-container');
+    const chatContainer = document.getElementById('chat-container');
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInput = document.getElementById('chat-input');
+    const summaryContainer = document.getElementById('summary-container');
+    const newsModal = document.getElementById('news-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalDescription = document.getElementById('modal-description');
+    const modalImage = document.getElementById('modal-image');
+    const modalTimestamp = document.getElementById('modal-timestamp');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    let allNews = [];
+    const itemsPerPage = 6;
+    let currentPage = 1;
 
-        function initMap() {
-            map = L.map('map', {
-                attributionControl: false,
-                zoomControl: false,
-                zoomAnimation: true,
-                fadeAnimation: true,
-                markerZoomAnimation: true,
-                inertia: true,
-                inertiaDeceleration: 8000,
-                friction: 0.6
-            }).setView([20, 0], 2);
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                minZoom: 1,
-                attribution: '© OpenStreetMap'
-            }).addTo(map);
-        }
-
-        function createPinSvg(news) {
-            return `
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-                    <g transform="scale(0.35)">
-                        <ellipse cx="44.996" cy="82.095" rx="25.776" ry="7.325" style="fill: ${news.secondary_color};"/>
-                        <path d="M 45 1 C 27.117 1 12.619 15.498 12.619 33.381 c 0 7.984 2.903 15.28 7.693 20.926 L 45 83.383 l 24.687 -29.077 c 4.79 -5.645 7.693 -12.942 7.693 -20.926 C 77.382 15.498 62.884 1 45 1 z" style="fill: ${news.primary_color};"/>
-                        <circle cx="44.998" cy="32.268" r="22.468" style="fill: rgb(255,255,255);"/>
-                        <image href="${news.logo_url}" x="37.089" y="23.543" width="15.75" height="15.75" transform="matrix(2.582769, 0, 0, 2.54471, -71.109339, -47.281293)"/>
-                    </g>
-                </svg>
-            `;
-        }
-
-        function addNewsMarker(news) {
-            if (news.lat && news.lon) {
-                const pinSvg = createPinSvg(news);
-                const customIcon = L.divIcon({
-                    html: pinSvg,
-                    iconSize: [32, 32],
-                    iconAnchor: [16, 32],
-                    popupAnchor: [0, -32],
-                    className: 'custom-pin'
-                });
-                const marker = L.marker([news.lat, news.lon], { icon: customIcon }).addTo(map);
-                marker.bindPopup(`
-                    <div class="modern-popup" style="border-color: ${news.primary_color};">
-                        <div class="logo-container">
-                            <img src="${news.logo_url}" alt="خبر" class="modern-logo">
-                        </div>
-                        <h3>${news.title}</h3>
-                        <div>${news.description}</div>
-                        <p class="timestamp">${news.timestamp}</p>
-                        <div class="section-title" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block';">معلومات الدولة</div>
-                        <div class="section-content">
-                            <p>الاقتصاد: ${news.details.economy.description}</p>
-                            <p>القوة العسكرية: ${news.details.military.description}</p>
-                            <p>الثقافة: ${news.details.culture.description}</p>
-                            <p>الحكومة: ${news.details.government.description}</p>
-                        </div>
-                    </div>
-                `, { closeButton: false });
-                markers.push(marker);
-            }
-        }
-
-        function renderNews(newsArray) {
-            const container = document.getElementById('news-container');
-            container.innerHTML = '';
-            newsArray.forEach(news => {
-                const newsItem = document.createElement('div');
-                newsItem.className = 'news-item';
-                newsItem.innerHTML = `
-                    <h2 class="news-title">${news.type === 'breaking' ? '🔔 ' : ''}${news.title}</h2>
-                    <p class="news-description">${news.description}</p>
-                    ${news.image ? `<img src="${news.image}" class="news-image" style="width: ${news.imageWidth}px; height: ${news.imageHeight}px;">` : ''}
-                    <p class="timestamp">${news.timestamp}</p>
-                `;
-                newsItem.addEventListener('click', () => {
-                    if (news.lat && news.lon) {
-                        map.flyTo([news.lat, news.lon], 10, { animate: true, duration: 0.7 });
-                        markers.find(m => m.getLatLng().lat === news.lat && m.getLatLng().lng === news.lon)?.openPopup();
-                    }
-                });
-                container.appendChild(newsItem);
-            });
-        }
-
-        socket.on('loadNews', (newsArray) => {
-            allNews = newsArray;
-            renderNews(allNews);
-            initMap();
-            newsArray.forEach(news => addNewsMarker(news));
+    function renderNews(newsArray) {
+      newsContainer.innerHTML = '';
+      const pages = Math.ceil(newsArray.length / itemsPerPage);
+      for (let i = 0; i < pages; i++) {
+        const pageDiv = document.createElement('div');
+        pageDiv.className = 'news-page';
+        pageDiv.id = `page-${i + 1}`;
+        const start = i * itemsPerPage;
+        const end = start + itemsPerPage;
+        newsArray.slice(start, end).forEach(news => {
+          const article = document.createElement('div');
+          article.className = `news-article ${news.type === 'urgent' ? 'urgent' : ''}`;
+          article.innerHTML = `
+            <h2>${news.title}</h2>
+            <p>${news.description}</p>
+            ${news.image ? `<img src="${news.image}" alt="صورة الخبر">` : ''}
+          `;
+          article.onclick = () => showNewsDetails(news);
+          pageDiv.appendChild(article);
         });
+        newsContainer.appendChild(pageDiv);
+      }
+      showPage(currentPage, pages);
+    }
 
-        socket.on('newNews', (news) => {
-            allNews.unshift(news);
-            renderNews(allNews);
-            addNewsMarker(news);
-        });
+    function showPage(page, totalPages) {
+      currentPage = page;
+      document.querySelectorAll('.news-page').forEach(pageDiv => pageDiv.classList.remove('active'));
+      document.getElementById(`page-${page}`).classList.add('active');
+      prevBtn.disabled = page === 1;
+      nextBtn.disabled = page === totalPages;
+    }
 
-        function toggleAssistantModal() {
-            const modal = document.getElementById('assistant-modal');
-            modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
-        }
+    prevBtn.onclick = () => { if (currentPage > 1) showPage(currentPage - 1, Math.ceil(allNews.length / itemsPerPage)); };
+    nextBtn.onclick = () => { if (currentPage < Math.ceil(allNews.length / itemsPerPage)) showPage(currentPage + 1, Math.ceil(allNews.length / itemsPerPage)); };
 
-        async function askAssistant() {
-            const input = document.getElementById('assistant-input').value;
-            const responseDiv = document.getElementById('assistant-response');
-            responseDiv.innerHTML = 'جاري التحميل...';
+    function showNewsDetails(news) {
+      modalTitle.innerText = news.title;
+      modalDescription.innerText = news.description;
+      modalImage.src = news.image || '';
+      modalImage.style.display = news.image ? 'block' : 'none';
+      modalTimestamp.innerText = news.timestamp;
+      newsModal.style.display = 'flex';
+    }
 
-            try {
-                const response = await fetch('/ask', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question: input, news: allNews })
-                });
-                const data = await response.json();
-                responseDiv.innerHTML = data.answer;
-            } catch (error) {
-                responseDiv.innerHTML = 'حدث خطأ أثناء الاستفسار.';
-            }
-        }
+    newsModal.onclick = (e) => {
+      if (e.target === newsModal) newsModal.style.display = 'none';
+    };
 
-        function toggleMapFullscreen() {
-            const mapDiv = document.getElementById('map');
-            mapDiv.classList.toggle('fullscreen');
-            map.invalidateSize(); // إعادة تحجيم الخريطة بعد التغيير
-        }
-    </script>
-    <svg>
-        <filter id="wavy2">
-            <feTurbulence x="0" y="0" baseFrequency="0.02" numOctaves="5" seed="1" />
-            <feDisplacementMap in="SourceGraphic" scale="20" />
-        </filter>
-    </svg>
+    socket.on('loadNews', (newsArray) => {
+      allNews = newsArray;
+      renderNews(allNews);
+    });
+
+    socket.on('newNews', (news) => {
+      allNews.unshift(news);
+      renderNews(allNews);
+    });
+
+    socket.on('dailySummary', (summary) => {
+      summaryContainer.innerText = summary;
+      summaryContainer.style.display = 'block';
+    });
+
+    socket.on('botResponse', (response) => {
+      const bubble = document.createElement('div');
+      bubble.className = 'chat-bubble bot';
+      bubble.innerText = response;
+      chatMessages.appendChild(bubble);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
+
+    function sendMessage() {
+      const message = chatInput.value.trim();
+      if (message) {
+        const bubble = document.createElement('div');
+        bubble.className = 'chat-bubble user';
+        bubble.innerText = message;
+        chatMessages.appendChild(bubble);
+        socket.emit('chatMessage', message);
+        chatInput.value = '';
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+    }
+
+    function toggleChat() {
+      chatContainer.style.display = chatContainer.style.display === 'block' ? 'none' : 'block';
+      summaryContainer.style.display = 'none';
+    }
+
+    function toggleSummary() {
+      fetch('/summarize');
+      summaryContainer.style.display = summaryContainer.style.display === 'block' ? 'none' : 'block';
+      chatContainer.style.display = 'none';
+    }
+
+    chatInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+  </script>
 </body>
 </html>
