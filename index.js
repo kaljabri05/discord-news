@@ -53,7 +53,7 @@ client.once('ready', async () => {
           if (!dailyNews.some(n => n.title === news.title && n.timestamp === news.timestamp)) {
             dailyNews.push(news);
             io.emit('newNews', news);
-            await updateRegionFromNews(news); // تحديث بيانات المنطقة عند تحميل الأخبار القديمة
+            await updateRegionFromNews(news);
           }
         });
       }
@@ -79,7 +79,7 @@ client.on('messageCreate', async (message) => {
       dailyNews.push(news);
       io.emit('newNews', news);
       await storage.setItem('dailyNews', dailyNews);
-      await updateRegionFromNews(news); // تحديث بيانات المنطقة عند ورود خبر جديد
+      await updateRegionFromNews(news);
     });
   }
 });
@@ -91,7 +91,7 @@ async function classifyNews(title, description) {
     "Ryukyu", "Shikoku", "Hokkaido", "Chugoku"
   ];
   const region = regions.find(r => title.includes(r) || description.includes(r)) || "Unknown";
-  return { type: "normal", region }; // يمكن توسيع التصنيف باستخدام Gemini إذا لزم الأمر
+  return { type: "normal", region };
 }
 
 // دالة الاستعلام من Gemini
@@ -105,7 +105,7 @@ async function queryGemini(prompt) {
     return response.data.candidates[0].content.parts[0].text;
   } catch (error) {
     console.error('خطأ في Gemini:', error);
-    return 'لا تغييرات'; // قيمة افتراضية في حالة الفشل
+    return 'لا تغييرات';
   }
 }
 
@@ -124,7 +124,6 @@ async function updateRegionFromNews(news) {
     `;
     const geminiResponse = await queryGemini(prompt);
 
-    // تحليل استجابة Gemini (افتراض أنها نص بسيط يحتوي على تحديثات)
     const updates = {};
     const lines = geminiResponse.split('\n');
     lines.forEach(line => {
@@ -133,7 +132,6 @@ async function updateRegionFromNews(news) {
       if (line.includes("ثقافة:")) updates.culture = line.replace("ثقافة:", "").trim();
     });
 
-    // تحديث البيانات إذا كانت هناك تغييرات
     if (updates.economy && updates.economy !== pin.details.economy.description) {
       pin.details.economy.description = updates.economy;
     }
@@ -144,7 +142,6 @@ async function updateRegionFromNews(news) {
       pin.details.culture.description = updates.culture;
     }
 
-    // حفظ التغييرات وإرسالها إلى العملاء
     await storage.setItem('pinsData', pinsData);
     io.emit('regionUpdated', { region, updatedData: pin.details });
   }
@@ -154,13 +151,15 @@ async function updateRegionFromNews(news) {
 io.on('connection', (socket) => {
   console.log('عميل متصل:', socket.id);
 
-  // إرسال الأخبار الحالية إلى العميل الجديد
   socket.emit('initNews', dailyNews);
-
-  // إرسال بيانات الدبابيس الحالية إلى العميل الجديد
   socket.emit('initPins', pinsData);
 
-  // استقبال طلب تحديث المنطقة من العميل (في حالة يدوية)
+  socket.on('updatePins', (updatedPins) => {
+    pinsData = updatedPins;
+    storage.setItem('pinsData', pinsData);
+    io.emit('initPins', pinsData); // تحديث جميع العملاء
+  });
+
   socket.on('updateRegion', async ({ region, news }) => {
     await updateRegionFromNews(news);
   });
@@ -172,12 +171,31 @@ io.on('connection', (socket) => {
 
 // تقديم الملفات الثابتة
 app.use(express.static(__dirname));
+app.use(express.json());
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+app.get('/control', (req, res) => {
+  res.sendFile(path.join(__dirname, 'control.html'));
+});
+
 app.get('/pins.json', (req, res) => {
   res.json({ pins: pinsData, lines: [] });
+});
+
+app.post('/save-pins', (req, res) => {
+  pinsData = req.body.pins;
+  storage.setItem('pinsData', pinsData)
+    .then(() => {
+      io.emit('initPins', pinsData); // تحديث جميع العملاء
+      res.status(200).send('تم الحفظ بنجاح');
+    })
+    .catch(err => {
+      console.error('خطأ في الحفظ:', err);
+      res.status(500).send('فشل في الحفظ');
+    });
 });
 
 // تشغيل الخادم
