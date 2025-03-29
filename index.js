@@ -18,11 +18,10 @@ const client = new Client({
   ]
 });
 
-const CHANNEL_ID = '1293122239964909661'; // معرف قناة Discord
+const CHANNEL_ID = '1293122239964909661';
 let dailyNews = [];
-let pinsData = require('./pins.json').pins; // تحميل بيانات الدبابيس
+let pinsData = require('./pins.json').pins;
 
-// تهيئة التخزين المستمر
 (async () => {
   await storage.init({ dir: 'storage' });
   const storedNews = await storage.getItem('dailyNews');
@@ -31,7 +30,6 @@ let pinsData = require('./pins.json').pins; // تحميل بيانات الدب�
   if (storedPins) pinsData = storedPins;
 })();
 
-// عندما يصبح البوت جاهزًا
 client.once('ready', async () => {
   console.log('البوت جاهز!');
   const channel = client.channels.cache.get(CHANNEL_ID);
@@ -62,7 +60,6 @@ client.once('ready', async () => {
   }
 });
 
-// استقبال الرسائل الجديدة من Discord
 client.on('messageCreate', async (message) => {
   if (message.channel.id === CHANNEL_ID && message.author.bot && message.embeds.length > 0) {
     message.embeds.forEach(async embed => {
@@ -84,17 +81,12 @@ client.on('messageCreate', async (message) => {
   }
 });
 
-// تصنيف الأخبار بناءً على المنطقة
 async function classifyNews(title, description) {
-  const regions = [
-    "Kansai", "Tohoku", "Chubu", "Kanto", "Kyushu", 
-    "Ryukyu", "Shikoku", "Hokkaido", "Chugoku"
-  ];
+  const regions = ["Kansai", "Tohoku", "Chubu", "Kanto", "Kyushu", "Ryukyu", "Shikoku", "Hokkaido", "Chugoku"];
   const region = regions.find(r => title.includes(r) || description.includes(r)) || "Unknown";
   return { type: "normal", region };
 }
 
-// دالة الاستعلام من Gemini
 async function queryGemini(prompt) {
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyCoUttcL62VrA0XLSf8KHAsTlh_LEbvLww';
   const headers = { 'Content-Type': 'application/json' };
@@ -105,11 +97,10 @@ async function queryGemini(prompt) {
     return response.data.candidates[0].content.parts[0].text;
   } catch (error) {
     console.error('خطأ في Gemini:', error);
-    return 'لا تغييرات';
+    return 'لا يمكن الرد حالياً';
   }
 }
 
-// تحديث بيانات المنطقة بناءً على الخبر باستخدام Gemini
 async function updateRegionFromNews(news) {
   const region = news.region;
   const pin = pinsData.find(p => p.anime.includes(region));
@@ -132,32 +123,24 @@ async function updateRegionFromNews(news) {
       if (line.includes("ثقافة:")) updates.culture = line.replace("ثقافة:", "").trim();
     });
 
-    if (updates.economy && updates.economy !== pin.details.economy.description) {
-      pin.details.economy.description = updates.economy;
-    }
-    if (updates.military && updates.military !== pin.details.military.description) {
-      pin.details.military.description = updates.military;
-    }
-    if (updates.culture && updates.culture !== pin.details.culture.description) {
-      pin.details.culture.description = updates.culture;
-    }
+    if (updates.economy && updates.economy !== pin.details.economy.description) pin.details.economy.description = updates.economy;
+    if (updates.military && updates.military !== pin.details.military.description) pin.details.military.description = updates.military;
+    if (updates.culture && updates.culture !== pin.details.culture.description) pin.details.culture.description = updates.culture;
 
     await storage.setItem('pinsData', pinsData);
     io.emit('regionUpdated', { region, updatedData: pin.details });
   }
 }
 
-// إعدادات Socket.IO
 io.on('connection', (socket) => {
   console.log('عميل متصل:', socket.id);
-
   socket.emit('initNews', dailyNews);
   socket.emit('initPins', pinsData);
 
   socket.on('updatePins', (updatedPins) => {
     pinsData = updatedPins;
     storage.setItem('pinsData', pinsData);
-    io.emit('initPins', pinsData); // تحديث جميع العملاء
+    io.emit('initPins', pinsData);
   });
 
   socket.on('updateRegion', async ({ region, news }) => {
@@ -169,7 +152,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// تقديم الملفات الثابتة
 app.use(express.static(__dirname));
 app.use(express.json());
 
@@ -189,7 +171,7 @@ app.post('/save-pins', (req, res) => {
   pinsData = req.body.pins;
   storage.setItem('pinsData', pinsData)
     .then(() => {
-      io.emit('initPins', pinsData); // تحديث جميع العملاء
+      io.emit('initPins', pinsData);
       res.status(200).send('تم الحفظ بنجاح');
     })
     .catch(err => {
@@ -198,12 +180,16 @@ app.post('/save-pins', (req, res) => {
     });
 });
 
-// تشغيل الخادم
+app.post('/ask-assistant', async (req, res) => {
+  const { prompt } = req.body;
+  const answer = await queryGemini(prompt);
+  res.send(answer);
+});
+
 server.listen(3000, () => {
   console.log('الخادم يعمل على المنفذ 3000');
 });
 
-// تسجيل البوت في Discord
 const BOT_TOKEN = process.env.BOT_TOKEN;
 if (!BOT_TOKEN) {
   console.error('خطأ: رمز البوت غير معرف! تأكد من تعيين BOT_TOKEN في متغيرات البيئة.');
