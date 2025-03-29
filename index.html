@@ -98,6 +98,74 @@
             font-size: var(--font-size);
             opacity: 0.9;
         }
+        #assistant-container {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 300px;
+            max-height: 400px;
+            background: rgba(28, 37, 38, 0.95);
+            border-radius: 10px;
+            box-shadow: 0 5px 25px var(--shadow-color);
+            padding: 1em;
+            display: none;
+            flex-direction: column;
+            z-index: 1001;
+            border: 2px solid #8f5922;
+        }
+        #assistant-container.active {
+            display: flex;
+        }
+        #assistant-messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 1em;
+        }
+        .message {
+            margin: 0.5em 0;
+            padding: 0.5em;
+            border-radius: 5px;
+        }
+        .user-message {
+            background: #d4a373;
+            color: #1c2526;
+            align-self: flex-end;
+        }
+        .assistant-message {
+            background: #8f5922;
+            color: #fff;
+        }
+        #assistant-input {
+            width: 100%;
+            padding: 0.5em;
+            border: 1px solid #d4a373;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+            font-size: var(--font-size);
+        }
+        #assistant-input:focus {
+            outline: none;
+            border-color: #ffcc99;
+        }
+        #assistant-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #8f5922;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.5em;
+            cursor: pointer;
+            box-shadow: 0 4px 15px var(--shadow-color);
+            transition: transform 0.2s ease;
+        }
+        #assistant-toggle:hover {
+            transform: scale(1.1);
+        }
         .modern-popup {
             padding: 1.5em;
             border-radius: 10px;
@@ -173,6 +241,15 @@
             #title {
                 font-size: calc(var(--font-size) * 1.2);
             }
+            #assistant-container {
+                width: 90%;
+                left: 5%;
+                bottom: 60px;
+            }
+            #assistant-toggle {
+                bottom: 10px;
+                right: 10px;
+            }
         }
     </style>
 </head>
@@ -185,6 +262,11 @@
         <div id="news-section">
             <h2 style="text-align: center; color: #ffcc99; margin-bottom: 1em;">الأخبار</h2>
             <div id="news-list"></div>
+        </div>
+        <button id="assistant-toggle">🤖</button>
+        <div id="assistant-container">
+            <div id="assistant-messages"></div>
+            <input type="text" id="assistant-input" placeholder="اسأل عن الأخبار...">
         </div>
     </div>
 
@@ -209,6 +291,10 @@
         let markers = [];
         let regionNews = {};
         const newsList = document.getElementById('news-list');
+        const assistantContainer = document.getElementById('assistant-container');
+        const assistantMessages = document.getElementById('assistant-messages');
+        const assistantInput = document.getElementById('assistant-input');
+        const assistantToggle = document.getElementById('assistant-toggle');
 
         function createPinSvg(location) {
             return `
@@ -301,6 +387,40 @@
             if (pin) {
                 pin.details = { ...pin.details, ...updatedData };
                 updateMap({ pins: pinsData, lines: [] });
+            }
+        });
+
+        // المساعد الشخصي
+        assistantToggle.addEventListener('click', () => {
+            assistantContainer.classList.toggle('active');
+        });
+
+        assistantInput.addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter' && assistantInput.value.trim()) {
+                const userMessage = document.createElement('div');
+                userMessage.className = 'message user-message';
+                userMessage.textContent = assistantInput.value;
+                assistantMessages.appendChild(userMessage);
+
+                const prompt = `
+                    استند إلى هذه الأخبار للإجابة:
+                    ${JSON.stringify(regionNews, null, 2)}
+                    السؤال: "${assistantInput.value}"
+                `;
+                const response = await fetch('/ask-assistant', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt })
+                });
+                const answer = await response.text();
+
+                const assistantMessage = document.createElement('div');
+                assistantMessage.className = 'message assistant-message';
+                assistantMessage.textContent = answer;
+                assistantMessages.appendChild(assistantMessage);
+
+                assistantMessages.scrollTop = assistantMessages.scrollHeight;
+                assistantInput.value = '';
             }
         });
 
