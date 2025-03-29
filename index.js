@@ -19,7 +19,7 @@ const client = new Client({
 });
 
 const CHANNEL_ID = '1293122239964909661';
-const START_MESSAGE_ID = '1353868688733900925'; // معرف الرسالة المحددة
+const START_MESSAGE_ID = '1353868688733900925';
 let dailyNews = [];
 let pinsData = require('./pins.json').pins;
 
@@ -35,7 +35,6 @@ client.once('ready', async () => {
   console.log('البوت جاهز!');
   const channel = client.channels.cache.get(CHANNEL_ID);
   if (channel) {
-    // جلب الرسائل بعد الرسالة المحددة
     const messages = await channel.messages.fetch({ after: START_MESSAGE_ID, limit: 100 });
     messages.forEach(async message => {
       if (message.author.bot && message.embeds.length > 0) {
@@ -99,7 +98,7 @@ async function queryGemini(prompt) {
     return response.data.candidates[0].content.parts[0].text;
   } catch (error) {
     console.error('خطأ في Gemini:', error);
-    return 'لا تغييرات';
+    return 'لا يمكن الرد حالياً';
   }
 }
 
@@ -142,7 +141,7 @@ io.on('connection', (socket) => {
   socket.on('updatePins', (updatedPins) => {
     pinsData = updatedPins;
     storage.setItem('pinsData', pinsData);
-    io.emit('initPins', pinsData);
+    io.emit('initPins', pinsData); // تحديث جميع العملاء
   });
 
   socket.on('updateRegion', async ({ region, news }) => {
@@ -180,6 +179,12 @@ app.post('/save-pins', (req, res) => {
       console.error('خطأ في الحفظ:', err);
       res.status(500).send('فشل في الحفظ');
     });
+});
+
+app.post('/ask-assistant', async (req, res) => {
+  const { prompt } = req.body;
+  const answer = await queryGemini(prompt);
+  res.send(answer);
 });
 
 server.listen(3000, () => {
