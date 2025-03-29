@@ -5,13 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>تعديل خريطة عالم فيتالم</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary-color: #8f5922;
-            --secondary-color: #fffef0;
+            --secondary-color: #d4a373;
             --shadow-color: #432100;
-            --accent-color: #d4a373;
             --font-size: clamp(12px, 2.5vw, 16px);
             --btn-size: clamp(40px, 10vw, 50px);
         }
@@ -24,8 +23,9 @@
             height: 100%;
             width: 100%;
             overflow: hidden;
-            background: linear-gradient(135deg, #1a0f00, #3d2600);
-            font-family: 'Amiri', serif;
+            background: linear-gradient(135deg, #1c2526, #3b2f2f);
+            font-family: 'IM Fell English SC', serif;
+            color: #d4a373;
         }
         #map {
             height: 100vh;
@@ -36,32 +36,33 @@
             position: fixed;
             z-index: 1000;
             background: var(--primary-color);
-            color: var(--secondary-color);
+            color: #fff;
             border: none;
             border-radius: 50%;
             width: var(--btn-size);
             height: var(--btn-size);
             font-size: clamp(1em, 3vw, 1.5em);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 12px var(--shadow-color);
             transition: transform 0.2s ease;
             cursor: pointer;
         }
         .floating-btn:hover {
             transform: scale(1.1);
-            background: var(--accent-color);
+            background: var(--secondary-color);
         }
         #add-pin-btn { bottom: calc(var(--btn-size) * 2 + 30px); right: 10px; }
         #add-line-btn { bottom: calc(var(--btn-size) + 20px); right: 10px; }
         #save-all-btn { bottom: 10px; right: 10px; }
         
         .popup-content {
-            background: rgba(255, 254, 240, 0.95);
+            background: rgba(28, 37, 38, 0.95);
             padding: 1em;
             border-radius: 10px;
             border: 2px solid var(--primary-color);
             max-width: 300px;
             text-align: right;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 5px 15px var(--shadow-color);
+            color: #d4a373;
         }
         .popup-content img {
             width: 60px;
@@ -73,7 +74,7 @@
         }
         .popup-content h3 {
             font-size: calc(var(--font-size) * 1.2);
-            color: var(--primary-color);
+            color: var(--secondary-color);
             margin-bottom: 0.5em;
             text-align: center;
         }
@@ -86,12 +87,12 @@
         }
         .popup-section span {
             font-size: var(--font-size);
-            color: #333;
+            color: #d4a373;
             flex: 1;
         }
         .edit-btn {
-            background: var(--accent-color);
-            color: #fff;
+            background: var(--secondary-color);
+            color: #1c2526;
             border: none;
             padding: 0.3em 0.6em;
             border-radius: 5px;
@@ -101,6 +102,7 @@
         }
         .edit-btn:hover {
             background: var(--primary-color);
+            color: #fff;
         }
         .popup-controls {
             border-top: 1px solid var(--primary-color);
@@ -108,7 +110,7 @@
         }
         .popup-controls label {
             font-size: calc(var(--font-size) * 0.9);
-            color: var(--primary-color);
+            color: var(--secondary-color);
             display: block;
             margin: 0.3em 0;
         }
@@ -121,6 +123,8 @@
             border: 1px solid var(--primary-color);
             border-radius: 5px;
             font-size: var(--font-size);
+            background: rgba(255, 255, 255, 0.1);
+            color: #d4a373;
         }
         .edit-overlay {
             position: fixed;
@@ -129,9 +133,9 @@
             width: 100%;
             max-width: 100%;
             height: 80vh;
-            background: rgba(255, 254, 240, 0.98);
+            background: rgba(28, 37, 38, 0.98);
             border-top: 3px solid var(--primary-color);
-            box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 -5px 20px var(--shadow-color);
             padding: 1em;
             overflow-y: auto;
             transform: translateY(100%);
@@ -141,7 +145,7 @@
         }
         .edit-overlay.active { transform: translateY(0); }
         .edit-overlay h5 {
-            color: var(--primary-color);
+            color: var(--secondary-color);
             font-size: clamp(1.2em, 3vw, 1.5em);
             text-align: center;
             margin-bottom: 0.5em;
@@ -151,7 +155,7 @@
             top: 10px;
             left: 10px;
             background: var(--primary-color);
-            color: var(--secondary-color);
+            color: #fff;
             border: none;
             border-radius: 50%;
             width: 25px;
@@ -166,10 +170,11 @@
             border: 1px solid var(--primary-color);
             border-radius: 5px;
             font-size: var(--font-size);
-            background: #fff;
+            background: rgba(255, 255, 255, 0.1);
+            color: #d4a373;
         }
         .form-control:focus {
-            border-color: var(--accent-color);
+            border-color: var(--secondary-color);
             box-shadow: 0 0 5px rgba(212, 163, 115, 0.5);
             outline: none;
         }
@@ -184,7 +189,7 @@
             transition: all 0.2s ease;
         }
         .btn-primary { background: var(--primary-color); color: #fff; border: none; }
-        .btn-primary:hover { background: var(--accent-color); transform: scale(1.02); }
+        .btn-primary:hover { background: var(--secondary-color); transform: scale(1.02); color: #1c2526; }
         @media (min-width: 768px) {
             .edit-overlay { max-width: 500px; left: 50%; transform: translateX(-50%) translateY(100%); }
             .edit-overlay.active { transform: translateX(-50%) translateY(0); }
@@ -266,6 +271,7 @@
                 marker.on('dragend', (e) => {
                     pin.position = [e.target.getLatLng().lat, e.target.getLatLng().lng];
                     if (currentPin === index) updatePinPopup(pin);
+                    saveData();
                 });
 
                 marker.on('click', () => {
@@ -332,6 +338,7 @@
 
             tempPin.marker.on('dragend', (e) => {
                 tempPin.position = [e.target.getLatLng().lat, e.target.getLatLng().lng];
+                saveData();
             });
         }
 
@@ -432,7 +439,7 @@
                 position: [map.getCenter().lat, map.getCenter().lng],
                 anime: 'دبوس جديد',
                 primary_color: '#8f5922',
-                secondary_color: '#fffef0',
+                secondary_color: '#d4a373',
                 logo_url: 'https://via.placeholder.com/50',
                 details: {
                     economy: { value: '', description: '' },
@@ -445,10 +452,10 @@
             currentPin = pins.length - 1;
             renderPins();
             markers[currentPin].openPopup();
+            saveData();
         };
 
         document.getElementById('add-line-btn').onclick = () => {
-            // منطق إضافة الخطوط (غير مفعل حالياً)
             alert('إضافة الخطوط غير مدعومة حالياً');
         };
 
@@ -466,7 +473,7 @@
                     body: JSON.stringify(data)
                 });
                 if (!response.ok) throw new Error('فشل في حفظ البيانات');
-                socket.emit('updatePins', pins); // إرسال التحديثات إلى العملاء
+                socket.emit('updatePins', pins); // تحديث جميع العملاء
             } catch (err) {
                 console.error('خطأ في حفظ البيانات:', err);
                 throw err;
