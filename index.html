@@ -2,19 +2,20 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>خريطة عالم فيتالم</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>عالم فيتالم</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --fontSize: calc((1vw + 1vh) * .75);
-            --primary-color: #8f5922;
-            --secondary-color: #fffef0;
-            --shadow-color: #432100;
-            --accent-color: #d4a373;
+            --primary-color: #ff6f61;
+            --secondary-color: #1f2a44;
+            --accent-color: #00d4ff;
+            --text-color: #ffffff;
+            --shadow-color: rgba(0, 0, 0, 0.5);
+            --font-size: clamp(14px, 2.5vw, 18px);
         }
-        *, *:before, *:after {
+        * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
@@ -23,143 +24,196 @@
             height: 100%;
             width: 100%;
             overflow: hidden;
-            background: linear-gradient(135deg, #1a0f00, #3d2600);
-            color: var(--shadow-color);
-            font-family: 'Amiri', serif;
+            background: var(--secondary-color);
+            font-family: 'Cairo', sans-serif;
+            color: var(--text-color);
         }
-        main {
-            position: relative;
-            width: 100%;
-            height: 100vh;
+        #app {
+            height: 100%;
             display: flex;
             flex-direction: column;
-            align-items: center;
         }
-        #parchment {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            padding: 1em;
-            box-shadow: inset 0 0 50px rgba(143, 89, 34, 0.5);
-            background: var(--secondary-color);
-            filter: url(#wavy2);
-            border-radius: 15px;
-        }
-        #contain {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-        }
-        #map {
-            height: 100vh;
-            width: 100%;
-            border: 4px solid var(--primary-color);
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-            transition: all 0.3s ease;
-        }
-        #map:hover {
-            box-shadow: 0 0 25px rgba(143, 89, 34, 0.6);
-        }
-        #header {
-            position: absolute;
-            top: 1em;
-            left: 50%;
-            transform: translateX(-50%);
+        #navbar {
             display: flex;
+            justify-content: space-around;
             align-items: center;
-            gap: 1em;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            padding: 1em;
+            box-shadow: 0 4px 10px var(--shadow-color);
+            position: fixed;
+            width: 100%;
+            top: 0;
             z-index: 1000;
-            transition: opacity 0.3s ease;
         }
-        .inkTitle {
-            font-size: calc(var(--fontSize) * 1.6);
+        .nav-btn {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: var(--font-size);
             font-weight: 700;
-            text-align: center;
-            color: var(--primary-color);
-            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4);
-            background: rgba(255, 254, 240, 0.8);
-            padding: 0.3em 1em;
-            border-radius: 20px;
-            box-shadow: 0 2px 10px rgba(143, 89, 34, 0.3);
-            transition: opacity 0.3s ease, transform 0.3s ease;
-        }
-        #searchInput {
-            padding: 0.5em 1em;
-            font-size: calc(var(--fontSize) * 1);
-            border: 2px solid var(--primary-color);
-            border-radius: 25px;
-            background: rgba(255, 254, 240, 0.95);
-            color: var(--shadow-color);
-            width: 150px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-            transition: width 0.4s ease, transform 0.4s ease, box-shadow 0.4s ease;
-        }
-        #searchInput:focus {
-            width: 90vw;
-            transform: scale(1.05);
-            box-shadow: 0 4px 15px rgba(143, 89, 34, 0.5);
-            border-color: var(--accent-color);
-            outline: none;
-        }
-        #searchResults {
-            position: absolute;
-            top: 100%;
-            width: 90vw;
-            max-width: 300px;
-            background: rgba(255, 254, 240, 0.95);
-            border: 2px solid var(--primary-color);
-            border-radius: 15px;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1001;
-            display: none;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            margin-top: 0.5em;
-            animation: slideIn 0.3s ease-out;
-        }
-        #searchResults div {
             padding: 0.5em 1em;
             cursor: pointer;
-            transition: background 0.2s ease, transform 0.2s ease;
+            transition: transform 0.2s ease, color 0.2s ease;
         }
-        #searchResults div:hover {
-            background: rgba(143, 89, 34, 0.1);
+        .nav-btn:hover, .nav-btn.active {
+            color: var(--secondary-color);
+            transform: scale(1.1);
+        }
+        #content {
+            flex: 1;
+            margin-top: 60px;
+            overflow: hidden;
+            position: relative;
+        }
+        .page {
+            display: none;
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transition: opacity 0.3s ease;
+        }
+        .page.active {
+            display: block;
+            opacity: 1;
+        }
+        #map-page {
+            padding: 1em;
+        }
+        #map-container {
+            height: 80vh;
+            width: 100%;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px var(--shadow-color);
+            background: rgba(255, 255, 255, 0.1);
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        #news-page {
+            padding: 1em;
+            display: flex;
+            flex-direction: column;
+            gap: 1em;
+        }
+        #news-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1em;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            box-shadow: 0 5px 20px var(--shadow-color);
+        }
+        .news-item {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            padding: 1em;
+            margin-bottom: 1em;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px var(--shadow-color);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        .news-item:hover {
             transform: scale(1.02);
         }
-        @keyframes slideIn {
-            from { transform: translateY(-10px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+        .news-item h3 {
+            font-size: calc(var(--font-size) * 1.1);
+            margin-bottom: 0.5em;
+        }
+        .news-item p {
+            font-size: var(--font-size);
+            opacity: 0.9;
+        }
+        #assistant-container {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 300px;
+            max-height: 400px;
+            background: rgba(31, 42, 68, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 5px 25px var(--shadow-color);
+            padding: 1em;
+            display: none;
+            flex-direction: column;
+            z-index: 1001;
+        }
+        #assistant-container.active {
+            display: flex;
+        }
+        #assistant-messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 1em;
+        }
+        .message {
+            margin: 0.5em 0;
+            padding: 0.5em;
+            border-radius: 10px;
+        }
+        .user-message {
+            background: var(--primary-color);
+            align-self: flex-end;
+        }
+        .assistant-message {
+            background: var(--accent-color);
+            color: var(--secondary-color);
+        }
+        #assistant-input {
+            width: 100%;
+            padding: 0.5em;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+            font-size: var(--font-size);
+        }
+        #assistant-input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.2);
+        }
+        #assistant-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--primary-color);
+            color: var(--text-color);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.5em;
+            cursor: pointer;
+            box-shadow: 0 4px 15px var(--shadow-color);
+            transition: transform 0.2s ease;
+        }
+        #assistant-toggle:hover {
+            transform: scale(1.1);
         }
         .modern-popup {
-            background: linear-gradient(135deg, rgba(255, 254, 240, 0.9), rgba(143, 89, 34, 0.2));
+            background: rgba(31, 42, 68, 0.95);
             padding: 1.5em;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            max-width: 320px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px var(--shadow-color);
+            max-width: 300px;
             text-align: right;
-            transform: perspective(1000px) rotateY(-10deg) scale(0.9);
-            opacity: 0;
-            animation: popupEnter 0.6s ease-out forwards;
-        }
-        @keyframes popupEnter {
-            from { transform: perspective(1000px) rotateY(-20deg) scale(0.8); opacity: 0; }
-            to { transform: perspective(1000px) rotateY(0deg) scale(1); opacity: 1; }
+            color: var(--text-color);
         }
         .modern-popup h3 {
-            font-size: calc(var(--fontSize) * 1.3);
+            font-size: calc(var(--font-size) * 1.2);
             margin-bottom: 0.7em;
+            color: var(--accent-color);
         }
         .logo-container {
-            width: 80px;
-            height: 80px;
+            width: 70px;
+            height: 70px;
             border-radius: 50%;
             overflow: hidden;
             margin: 0 auto 1em;
-            border: 3px solid var(--primary-color);
+            border: 2px solid var(--accent-color);
         }
         .modern-logo {
             width: 100%;
@@ -167,39 +221,23 @@
             object-fit: cover;
         }
         .section-title {
-            font-size: calc(var(--fontSize) * 1);
+            font-size: var(--font-size);
             font-weight: 700;
-            padding: 0.4em;
-            background: rgba(0, 0, 0, 0.3);
+            padding: 0.5em;
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 8px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: background 0.2s ease;
         }
         .section-title:hover {
-            background: rgba(143, 89, 34, 0.5);
-            transform: translateX(5px);
+            background: rgba(255, 255, 255, 0.2);
         }
         .section-content {
             display: none;
             padding: 0.6em;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 5px;
-            font-size: calc(var(--fontSize) * 0.9);
-        }
-        .news-section {
-            margin-top: 1em;
-            max-height: 150px;
-            overflow-y: auto;
-            background: rgba(255, 255, 255, 0.2);
-            padding: 0.5em;
-            border-radius: 5px;
-        }
-        .news-item {
-            font-size: calc(var(--fontSize) * 0.8);
-            margin-bottom: 0.5em;
-            padding: 0.3em;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 5px;
+            font-size: calc(var(--font-size) * 0.9);
         }
         .close-btn {
             position: absolute;
@@ -208,14 +246,11 @@
             width: 20px;
             height: 20px;
             background: var(--primary-color);
-            color: var(--secondary-color);
+            color: var(--text-color);
             border: none;
             border-radius: 50%;
             font-size: 12px;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
         .leaflet-popup-content-wrapper {
             background: transparent !important;
@@ -225,22 +260,37 @@
         .leaflet-popup-tip-container {
             display: none !important;
         }
+        @media (max-width: 768px) {
+            #navbar { padding: 0.5em; }
+            .nav-btn { font-size: calc(var(--font-size) * 0.9); }
+            #map-container { height: 60vh; }
+            #assistant-container { width: 90%; left: 5%; bottom: 60px; }
+            #assistant-toggle { bottom: 10px; right: 10px; }
+        }
     </style>
 </head>
 <body>
-    <main>
-        <div id="parchment"></div>
-        <div id="contain">
-            <div id="map">
-                <div id="header">
-                    <p class="inkTitle">خريطة عالم فيتالم</p>
-                    <input type="text" id="searchInput" placeholder="ابحث عن دبوس...">
-                    <button id="refresh-btn" style="padding: 0.5em; background: var(--primary-color); color: var(--secondary-color); border: none; border-radius: 5px;">تحديث</button>
-                    <div id="searchResults"></div>
+    <div id="app">
+        <div id="navbar">
+            <button class="nav-btn active" data-page="map-page">الخريطة</button>
+            <button class="nav-btn" data-page="news-page">الأخبار</button>
+        </div>
+        <div id="content">
+            <div id="map-page" class="page active">
+                <div id="map-container">
+                    <div id="map"></div>
                 </div>
             </div>
+            <div id="news-page" class="page">
+                <div id="news-list"></div>
+            </div>
         </div>
-    </main>
+        <button id="assistant-toggle">🤖</button>
+        <div id="assistant-container">
+            <div id="assistant-messages"></div>
+            <input type="text" id="assistant-input" placeholder="اسأل عن الأخبار...">
+        </div>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="/socket.io/socket.io.js"></script>
@@ -248,9 +298,9 @@
         const socket = io();
         const map = L.map('map', { 
             attributionControl: false,
-            zoomControl: false,
+            zoomControl: true,
             zoomAnimation: true,
-        }).setView([35.6762, 139.6503], 5); // مركز اليابان (طوكيو)
+        }).setView([35.6762, 139.6503], 5);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
@@ -258,13 +308,14 @@
             attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         }).addTo(map);
 
-        const searchInput = document.getElementById('searchInput');
-        const searchResults = document.getElementById('searchResults');
-        const inkTitle = document.querySelector('.inkTitle');
-        const header = document.getElementById('header');
         let pinsData = [];
         let markers = [];
         let regionNews = {};
+        const newsList = document.getElementById('news-list');
+        const assistantContainer = document.getElementById('assistant-container');
+        const assistantMessages = document.getElementById('assistant-messages');
+        const assistantInput = document.getElementById('assistant-input');
+        const assistantToggle = document.getElementById('assistant-toggle');
 
         function createPinSvg(location) {
             return `
@@ -277,16 +328,6 @@
                     </g>
                 </svg>
             `;
-        }
-
-        function loadPinsAndLines() {
-            fetch('/pins.json')
-                .then(response => response.json())
-                .then(data => {
-                    pinsData = data.pins;
-                    updateMap(data);
-                })
-                .catch(err => console.error('خطأ في تحميل الدبابيس:', err));
         }
 
         function updateMap(data) {
@@ -304,13 +345,13 @@
                 });
                 const marker = L.marker(location.position, { icon: customIcon }).addTo(map);
                 marker.bindPopup(`
-                    <div class="modern-popup" style="border: 4px solid ${location.primary_color};">
+                    <div class="modern-popup" style="border: 2px solid ${location.primary_color};">
                         <button class="close-btn" onclick="this.closest('.leaflet-popup').remove()">×</button>
                         <div class="logo-container">
                             <img src="${location.logo_url}" alt="${location.anime}" class="modern-logo">
                         </div>
-                        <h3 style="color: ${location.secondary_color}">${location.details.government.description}</h3>
-                        <div style="color: ${location.secondary_color};">
+                        <h3>${location.details.government.description}</h3>
+                        <div>
                             <div class="section-title" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block';">الاقتصاد</div>
                             <div class="section-content">${location.details.economy.value}: ${location.details.economy.description}</div>
                             <div class="section-title" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block';">العسكرية</div>
@@ -319,8 +360,6 @@
                             <div class="section-content">${location.details.culture.description}</div>
                             <div class="section-title" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block';">نظام الحكم</div>
                             <div class="section-content">${location.details.government.leader} - ${location.details.government.description}</div>
-                            <div class="section-title" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block';">آخر الأخبار</div>
-                            <div class="section-content news-section" id="news-${location.anime}">${getRegionNews(location.anime)}</div>
                         </div>
                     </div>
                 `, { closeButton: false });
@@ -328,20 +367,39 @@
             });
         }
 
-        function getRegionNews(region) {
-            const news = regionNews[region] || [];
-            return news.length > 0 
-                ? news.map(n => `<div class="news-item">${n.title} - ${n.timestamp}</div>`).join('')
-                : 'لا توجد أخبار حاليًا';
+        function updateNews() {
+            newsList.innerHTML = '';
+            Object.keys(regionNews).forEach(region => {
+                regionNews[region].forEach(news => {
+                    const newsItem = document.createElement('div');
+                    newsItem.className = 'news-item';
+                    newsItem.innerHTML = `
+                        <h3>${region}: ${news.title}</h3>
+                        <p>${news.description} - ${news.timestamp}</p>
+                    `;
+                    newsList.appendChild(newsItem);
+                });
+            });
         }
+
+        socket.on('initNews', (news) => {
+            news.forEach(n => {
+                if (!regionNews[n.region]) regionNews[n.region] = [];
+                regionNews[n.region].push(n);
+            });
+            updateNews();
+        });
+
+        socket.on('initPins', (pins) => {
+            pinsData = pins;
+            updateMap({ pins: pinsData, lines: [] });
+        });
 
         socket.on('newNews', (news) => {
             const region = news.region || 'Unknown';
             if (!regionNews[region]) regionNews[region] = [];
             regionNews[region].unshift(news);
-            const newsSection = document.getElementById(`news-${region}`);
-            if (newsSection) newsSection.innerHTML = getRegionNews(region);
-            updateRegionData(region, news);
+            updateNews();
         });
 
         socket.on('regionUpdated', ({ region, updatedData }) => {
@@ -352,50 +410,58 @@
             }
         });
 
-        function updateRegionData(region, news) {
-            const pin = pinsData.find(p => p.anime === region);
-            if (pin) {
-                socket.emit('updateRegion', { region, news });
-            }
-        }
+        // التنقل بين الصفحات
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+                document.getElementById(btn.dataset.page).classList.add('active');
+            });
+        });
 
-        searchInput.addEventListener('input', () => {
-            const query = searchInput.value.toLowerCase().trim();
-            searchResults.innerHTML = '';
-            searchResults.style.display = 'none';
+        // المساعد الذكي
+        assistantToggle.addEventListener('click', () => {
+            assistantContainer.classList.toggle('active');
+        });
 
-            if (query.length > 0) {
-                const results = pinsData.filter(pin => 
-                    pin.anime.toLowerCase().includes(query) ||
-                    pin.details.economy.description.toLowerCase().includes(query) ||
-                    pin.details.military.description.toLowerCase().includes(query) ||
-                    pin.details.culture.description.toLowerCase().includes(query) ||
-                    pin.details.government.description.toLowerCase().includes(query)
-                );
-                if (results.length > 0) {
-                    results.forEach(pin => {
-                        const resultItem = document.createElement('div');
-                        resultItem.textContent = pin.anime;
-                        resultItem.addEventListener('click', () => {
-                            map.flyTo(pin.position, 10, { animate: true, duration: 0.7 });
-                            searchResults.style.display = 'none';
-                            searchInput.value = pin.anime;
-                        });
-                        searchResults.appendChild(resultItem);
-                    });
-                    searchResults.style.display = 'block';
-                }
+        assistantInput.addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter' && assistantInput.value.trim()) {
+                const userMessage = document.createElement('div');
+                userMessage.className = 'message user-message';
+                userMessage.textContent = assistantInput.value;
+                assistantMessages.appendChild(userMessage);
+
+                const prompt = `
+                    استند إلى هذه الأخبار للإجابة:
+                    ${JSON.stringify(regionNews, null, 2)}
+                    السؤال: "${assistantInput.value}"
+                `;
+                const response = await fetch('/ask-assistant', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt })
+                });
+                const answer = await response.text();
+
+                const assistantMessage = document.createElement('div');
+                assistantMessage.className = 'message assistant-message';
+                assistantMessage.textContent = answer;
+                assistantMessages.appendChild(assistantMessage);
+
+                assistantMessages.scrollTop = assistantMessages.scrollHeight;
+                assistantInput.value = '';
             }
         });
 
-        document.getElementById('refresh-btn').addEventListener('click', loadPinsAndLines);
-        loadPinsAndLines();
+        // تحميل البيانات الأولية
+        fetch('/pins.json')
+            .then(response => response.json())
+            .then(data => {
+                pinsData = data.pins;
+                updateMap(data);
+            })
+            .catch(err => console.error('خطأ في تحميل الدبابيس:', err));
     </script>
-    <svg>
-        <filter id="wavy2">
-            <feTurbulence x="0" y="0" baseFrequency="0.02" numOctaves="5" seed="1" />
-            <feDisplacementMap in="SourceGraphic" scale="20" />
-        </filter>
-    </svg>
 </body>
 </html>
