@@ -1,0 +1,97 @@
+body {
+  margin: 0;
+  font-family: 'Cairo', sans-serif;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  direction: rtl;
+}
+
+header {
+  background: #2c1a0e;
+  padding: 1rem;
+  text-align: center;
+  font-size: 1.5rem;
+  color: #d4a373;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+nav a {
+  color: #d4a373;
+  margin: 0 1rem;
+  text-decoration: none;
+}
+
+nav a:hover {
+  color: #e0e0e0;
+}
+
+#map {
+  height: 80vh;
+  width: 100%;
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  background: #2e1c12;
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+  color: #e0e0e0;
+  max-width: 500px;
+  width: 90%;
+  animation: modalFadeIn 0.3s ease-out forwards;
+}
+
+.modal img {
+  max-width: 100%;
+  border-radius: 5px;
+}
+
+@keyframes modalFadeIn {
+  to {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.news-container, .library-container {
+  padding: 2rem;
+}
+
+.news-item, .story-card {
+  background: #2e1c12;
+  padding: 1rem;
+  margin: 1rem 0;
+  border-radius: 5px;
+}
+
+.chat-container {
+  padding: 1rem;
+  background: #3a2317;
+  border-radius: 5px;
+}
+
+input, textarea, button {
+  font-family: 'Cairo', sans-serif;
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  border-radius: 5px;
+  border: none;
+}
+
+button {
+  background: #d4a373;
+  color: #1a1a1a;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #e0e0e0;
+}
+
+.admin-form {
+  padding: 2rem;
+}
