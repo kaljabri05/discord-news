@@ -4,8 +4,19 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fs = require('fs').promises;
 const path = require('path');
 
+// Initialize Express
 const app = express();
-const client = new Discord.Client({ intents: ['GUILDS', 'GUILD_MESSAGES'] });
+
+// Initialize Discord Client with proper intents
+const { Client, GatewayIntentBits } = Discord;
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,         // For guild-related events
+    GatewayIntentBits.GuildMessages   // For message-related events in guilds
+  ]
+});
+
+// Initialize Google Generative AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.use(express.json());
