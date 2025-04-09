@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الإدارة | فيتالم</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="/">الخريطة</a>
+      <a href="/news">أخبار العالم</a>
+      <a href="/library">مكتبة العالم</a>
+      <a href="/admin">الإدارة</a>
+    </nav>
+  </header>
+  <div class="admin-form">
+    <h1>إدارة عالم فيتالم</h1>
+    <input type="password" id="password" placeholder="كلمة المرور">
+    <button onclick="checkPassword()">تأكيد</button>
+    <div id="admin-content" style="display: none;">
+      <h2>تعديل الممالك</h2>
+      <div id="pins-form"></div>
+      <button onclick="savePins()">حفظ التغييرات</button>
+      <p id="status"></p>
+    </div>
+  </div>
+  <script src="admin.js"></script>
+</body>
+</html>
